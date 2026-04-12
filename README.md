@@ -1,0 +1,130 @@
+# StoreWatch
+
+StoreWatch is a mobile-first Progressive Web App for a drinks and wine retail store. It supports two roles:
+
+- Owner: dashboard, inventory control, sales history, and product management
+- Employee: PIN login, offline-first sales capture, stock intake, and a personal daily log
+
+The frontend is built with React, Vite, TypeScript, Tailwind CSS, React Router, Dexie, Supabase JS, Lucide React, and vite-plugin-pwa. The app is installable on Android and iOS home screens and can continue working offline for employee actions.
+
+## Features
+
+- Mobile-first layout tuned for small screens
+- Owner and employee role flows
+- Supabase Auth for owner login
+- PIN-based employee login
+- Offline-first sales and stock updates with Dexie
+- Background sync when the device comes back online
+- Live owner dashboard updates through Supabase realtime
+- Product browsing while offline
+- PWA manifest, service worker, and install prompt support
+- Inline form validation and toast-based error handling
+- Responsive bottom navigation and touch-friendly controls
+
+## Prerequisites
+
+- Node.js 18 or newer
+- A free Supabase account
+
+## Clone And Install
+
+1. Clone or open this workspace.
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+## Create A Supabase Project
+
+1. Sign in to Supabase.
+2. Create a new project.
+3. Copy the project URL and anon key from the project settings.
+4. Put them in `.env` based on `.env.example`.
+
+## Run The Schema
+
+1. Open the Supabase SQL editor.
+2. Paste the contents of `supabase/schema.sql`.
+3. Run the script.
+4. Create the `public.users` rows for your owner and employees.
+
+## Environment Variables
+
+Create a `.env` file from `.env.example`:
+
+```bash
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+## Create The First Owner Account
+
+1. In Supabase Auth, create a new email/password user for the owner.
+2. Copy the user ID from the Auth dashboard.
+3. Insert a matching row into `public.users` with `role = 'owner'`.
+4. Use the same email and password to sign in through the app.
+
+Example SQL:
+
+```sql
+insert into public.users (id, name, role)
+values ('<auth-user-uuid>', 'Owner Name', 'owner');
+```
+
+## Create An Employee Record
+
+Employees are PIN-only in the app.
+
+1. Generate a bcrypt hash for the employee PIN.
+2. Insert a row into `public.users` with `role = 'employee'` and the hashed PIN.
+
+Example SQL:
+
+```sql
+insert into public.users (id, name, role, pin)
+values (gen_random_uuid(), 'Employee Name', 'employee', '$2a$10$replace_with_bcrypt_hash');
+```
+
+## Run Locally
+
+```bash
+npm run dev
+```
+
+## Build For Production
+
+```bash
+npm run build
+```
+
+The build output is written to `dist/`.
+
+## Deploy As A Static Site
+
+StoreWatch can be deployed to:
+
+- Vercel
+- Netlify
+- Render static hosting
+
+Use these build settings:
+
+- Build command: `npm run build`
+- Output directory: `dist`
+
+## Default Test Credentials
+
+Use these after setup:
+
+- Owner email: `owner@storewatch.local`
+- Owner password: `ChangeMe123!`
+- Employee PIN: `1234`
+
+Create matching records in Supabase before using them.
+
+## Notes
+
+- Employee write access is optimized for PIN-based use from the client and offline sync.
+- When online, the app refreshes the product cache from Supabase and syncs pending local records.
+- The service worker is registered through vite-plugin-pwa and the app ships with placeholder PWA icons in `public/`.

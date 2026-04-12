@@ -1,0 +1,212 @@
+import { Plus, RefreshCw, Package } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Modal } from '@/components/Modal';
+import { ProductForm, type ProductFormValues } from '@/components/ProductForm';
+import { useToast } from '@/components/ToastProvider';
+import { useProducts } from '@/hooks/useProducts';
+import { usePackagings } from '@/hooks/usePackagings';
+import { friendlyError, refreshProductsFromSupabase, saveProduct } from '@/lib/sync';
+import { formatCurrency } from '@/utils/formatCurrency';
+import type { ProductCategory, ProductRecord } from '@/types/models';
+import { formatStockDisplay } from '@/utils/stockDisplay';
+
+function getBadgeClass(product: ProductRecord) {
+  if (product.stock_qty <= product.low_stock_threshold) {
+    return 'bg-red-500/20 text-red-300 border-red-500/40';
+  }
+
+  if (product.stock_qty <= product.low_stock_threshold + 3) {
+    return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+  }
+
+  return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+}
+
+function emptyForm(): ProductFormValues {
+  return {
+    name: '',
+    category: 'Beer',
+    unit_price: '',
+    stock_qty: '',
+    low_stock_threshold: '5'
+  };
+}
+
+export default function InventoryPage() {
+  const { products } = useProducts();
+  const { packagings } = usePackagings();
+  const { error: pushError, success } = useToast();
+  const [editingProduct, setEditingProduct] = useState<ProductRecord | null>(null);
+  const [values, setValues] = useState<ProductFormValues>(emptyForm());
+  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormValues, string>>>({});
+  const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const groupedProducts = useMemo(
+    () =>
+      Array.from(new Set(products.map((product) => product.category)))
+        .sort((a, b) => a.localeCompare(b))
+        .map((category) => ({
+          category,
+          items: products.filter((product) => product.category === category)
+        }))
+        .filter((group) => group.items.length > 0),
+    [products]
+  );
+
+  const availableCategories = useMemo(
+    () => Array.from(new Set(products.map((product) => product.category))).sort((a, b) => a.localeCompare(b)),
+    [products]
+  );
+
+  function openEditor(product: ProductRecord) {
+    setEditingProduct(product);
+    setValues({
+      name: product.name,
+      category: product.category,
+      unit_price: String(product.unit_price),
+      stock_qty: String(product.stock_qty),
+      low_stock_threshold: String(product.low_stock_threshold)
+    });
+    setErrors({});
+    setAdding(false);
+  }
+
+  function openCreator() {
+    setEditingProduct(null);
+    setValues(emptyForm());
+    setErrors({});
+    setAdding(true);
+  }
+
+  function validate(current: ProductFormValues) {
+    const nextErrors: Partial<Record<keyof ProductFormValues, string>> = {};
+    if (!current.name.trim()) {
+      nextErrors.name = 'Name is required.';
+    }
+    if (!current.category) {
+      nextErrors.category = 'Category is required.';
+    }
+    if (!current.unit_price || Number(current.unit_price) < 0) {
+      nextErrors.unit_price = 'Enter a valid unit price.';
+    }
+    if (!current.stock_qty || Number(current.stock_qty) < 0) {
+      nextErrors.stock_qty = 'Enter a valid stock quantity.';
+    }
+    if (!current.low_stock_threshold || Number(current.low_stock_threshold) < 0) {
+      nextErrors.low_stock_threshold = 'Enter a valid threshold.';
+    }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  async function handleSave() {
+    if (!validate(values)) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await saveProduct({
+        id: editingProduct?.id,
+        name: values.name.trim(),
+        category: values.category,
+        unit_price: Number(values.unit_price),
+        stock_qty: Number(values.stock_qty),
+        low_stock_threshold: Number(values.low_stock_threshold)
+      });
+      success('Product saved', editingProduct ? 'Product changes updated.' : 'New product created.');
+      setEditingProduct(null);
+      setAdding(false);
+    } catch (error) {
+      pushError('Save failed', friendlyError(error, 'Unable to save product.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRefresh() {
+    setSaving(true);
+    try {
+      await refreshProductsFromSupabase();
+      success('Refreshed', 'Inventory synced from Supabase.');
+    } catch (error) {
+      pushError('Refresh failed', friendlyError(error, 'Unable to refresh inventory.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4 pb-6">
+      <Card className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-50">Inventory</h2>
+          <p className="text-sm text-slate-400">Grouped by category with live stock badges.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" className="min-h-12 min-w-12 rounded-xl" onClick={handleRefresh} disabled={saving}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button className="min-h-12 min-w-12 rounded-xl" onClick={openCreator}>
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
+      </Card>
+
+      <div className="space-y-4">
+        {groupedProducts.map((group) => (
+          <section key={group.category} className="space-y-2">
+            <div className="sticky top-0 z-10 -mx-4 border-y border-slate-800 bg-navy/95 px-4 py-2 backdrop-blur">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">{group.category}</p>
+            </div>
+            <div className="space-y-2">
+              {group.items.map((product) => (
+                <button key={product.id} onClick={() => openEditor(product)} className="w-full text-left">
+                  <Card className="flex items-center justify-between gap-3 transition hover:border-amberAccent/30">
+                    <div>
+                      <p className="font-semibold text-slate-50">{product.name}</p>
+                      <p className="text-sm text-slate-400">{formatStockDisplay(product, packagings)}</p>
+                      <p className="text-sm text-slate-500">{formatCurrency(Number(product.unit_price))}</p>
+                    </div>
+                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getBadgeClass(product)}`}>{product.stock_qty} in stock</span>
+                  </Card>
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <Button className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full shadow-soft" onClick={openCreator} aria-label="Add product">
+        <Plus className="h-6 w-6" />
+      </Button>
+
+      <Modal
+        open={Boolean(editingProduct) || adding}
+        title={editingProduct ? 'Edit Product' : 'Add Product'}
+        onClose={() => {
+          setEditingProduct(null);
+          setAdding(false);
+        }}
+        footer={
+          <div className="flex gap-3">
+            <Button variant="secondary" fullWidth onClick={() => {
+              setEditingProduct(null);
+              setAdding(false);
+            }}>
+              Cancel
+            </Button>
+            <Button fullWidth onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        }
+      >
+        <ProductForm values={values} errors={errors} onChange={setValues} categories={availableCategories} />
+      </Modal>
+    </div>
+  );
+}

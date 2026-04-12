@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="StoreWatch">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#FB7185" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="44" fill="#0F172A" />
+  <circle cx="96" cy="96" r="58" fill="url(#g)" opacity="0.2" />
+  <path d="M62 86c11-16 21-24 34-24s23 8 34 24c-11 16-21 24-34 24s-23-8-34-24z" fill="#F8FAFC" />
+  <circle cx="96" cy="86" r="10" fill="#0F172A" />
+  <path d="M66 130h60" stroke="#F59E0B" stroke-width="10" stroke-linecap="round" />
+</svg>
