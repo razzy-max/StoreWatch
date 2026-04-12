@@ -49,6 +49,60 @@ export function useEmployeeLog(employeeId?: string) {
   return { sales, loading };
 }
 
+export function useEmployeeStockLog(employeeId?: string) {
+  const [updates, setUpdates] = useState<StockUpdateView[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!employeeId) {
+      setUpdates([]);
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    const load = async () => {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const [cached, products, packaging] = await Promise.all([
+        db.stock_updates.where('recorded_by').equals(employeeId).toArray(),
+        db.products.toArray(),
+        db.product_packaging.toArray()
+      ]);
+
+      const rows = cached
+        .filter((item) => new Date(item.timestamp) >= startOfDay)
+        .map((item) => ({
+          ...item,
+          product_name: products.find((product) => product.id === item.product_id)?.name,
+          employee_name: employeeId,
+          packaging_label: packaging.find((pkg) => pkg.id === item.packaging_id)?.label
+        }))
+        .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+      if (mounted) {
+        setUpdates(rows);
+        setLoading(false);
+      }
+    };
+
+    load();
+
+    const handleChange = () => {
+      load();
+    };
+
+    window.addEventListener('storewatch:change', handleChange as EventListener);
+    return () => {
+      mounted = false;
+      window.removeEventListener('storewatch:change', handleChange as EventListener);
+    };
+  }, [employeeId]);
+
+  return { updates, loading };
+}
+
 export function useOwnerRecentSales() {
   const [sales, setSales] = useState<SaleView[]>([]);
   const [loading, setLoading] = useState(true);

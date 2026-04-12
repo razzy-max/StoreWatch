@@ -5,7 +5,8 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { useSalesHistory, useStockUpdates } from '@/hooks/useSales';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { formatDateRangeLabel, formatDateTime, formatShortTime } from '@/utils/formatDate';
+import { formatDateRangeLabel, formatDateTime } from '@/utils/formatDate';
+import { calculateInventorySpend, estimateCogsFromCostTimeline } from '@/utils/metrics';
 
 export default function HistoryPage() {
   const today = new Date().toISOString().slice(0, 10);
@@ -21,20 +22,8 @@ export default function HistoryPage() {
 
   const summary = useMemo(() => {
     const revenue = sales.reduce((sum, sale) => sum + Number(sale.total), 0);
-    const inventorySpend = stockInRange.reduce(
-      (sum, update) => sum + Number(update.cost_price_per_unit ?? 0) * Number(update.qty_base_units ?? update.qty_added),
-      0
-    );
-    const lastCostByProduct = new Map<string, number>();
-    for (const update of [...updates].sort((a, b) => b.timestamp.localeCompare(a.timestamp))) {
-      if (!lastCostByProduct.has(update.product_id) && Number(update.cost_price_per_unit ?? 0) > 0) {
-        lastCostByProduct.set(update.product_id, Number(update.cost_price_per_unit ?? 0));
-      }
-    }
-    const estimatedCogs = sales.reduce((sum, sale) => {
-      const costPerUnit = lastCostByProduct.get(sale.product_id) ?? 0;
-      return sum + costPerUnit * Number(sale.qty_base_units ?? sale.qty);
-    }, 0);
+    const inventorySpend = calculateInventorySpend(stockInRange);
+    const estimatedCogs = estimateCogsFromCostTimeline(sales, updates);
     const estimatedGrossProfit = revenue - estimatedCogs;
     const estimatedMargin = revenue > 0 ? (estimatedGrossProfit / revenue) * 100 : 0;
     return {
@@ -47,8 +36,16 @@ export default function HistoryPage() {
     };
   }, [sales, stockInRange, updates]);
 
+  function applyPreset(days: number) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (days - 1));
+    setStartDate(start.toISOString().slice(0, 10));
+    setEndDate(end.toISOString().slice(0, 10));
+  }
+
   return (
-    <div className="space-y-4 pb-28">
+    <div className="space-y-4 pb-6">
       <Card className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -65,6 +62,46 @@ export default function HistoryPage() {
           <div>
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">End Date</label>
             <input value={endDate} type="date" onChange={(event) => setEndDate(event.target.value)} className="h-12 w-full rounded-xl border border-slate-700 bg-navy px-4 text-slate-50 outline-none focus:border-amberAccent" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Button variant="secondary" onClick={() => applyPreset(1)}>
+            Today
+          </Button>
+          <Button variant="secondary" onClick={() => applyPreset(7)}>
+            7D
+          </Button>
+          <Button variant="secondary" onClick={() => applyPreset(30)}>
+            30D
+          </Button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Total Revenue</p>
+            <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.revenue)}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Inventory Spend</p>
+            <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.inventorySpend)}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Gross Profit (Est.)</p>
+            <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.estimatedGrossProfit)}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Gross Margin (Est.)</p>
+            <p className="text-xl font-bold text-slate-50">{summary.estimatedMargin.toFixed(1)}%</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Transactions</p>
+            <p className="text-xl font-bold text-slate-50">{summary.transactions}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Stock Receipts</p>
+            <p className="text-xl font-bold text-slate-50">{summary.stockReceipts}</p>
           </div>
         </div>
       </Card>
@@ -128,36 +165,6 @@ export default function HistoryPage() {
         )}
       </Card>
 
-      <div className="fixed bottom-24 left-4 right-4 z-20">
-        <Card className="border border-slate-700 bg-slatePanel/98 shadow-soft backdrop-blur">
-          <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-3 lg:grid-cols-6">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Total Revenue</p>
-              <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.revenue)}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Inventory Spend</p>
-              <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.inventorySpend)}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Gross Profit (Est.)</p>
-              <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.estimatedGrossProfit)}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Gross Margin (Est.)</p>
-              <p className="text-xl font-bold text-slate-50">{summary.estimatedMargin.toFixed(1)}%</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Transactions</p>
-              <p className="text-xl font-bold text-slate-50">{summary.transactions}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Stock Receipts</p>
-              <p className="text-xl font-bold text-slate-50">{summary.stockReceipts}</p>
-            </div>
-          </div>
-        </Card>
-      </div>
     </div>
   );
 }

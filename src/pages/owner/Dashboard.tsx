@@ -1,5 +1,5 @@
 import { ArrowRight, AlertTriangle, TrendingUp, ShoppingBag, Zap } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
@@ -11,6 +11,13 @@ import { usePackagings } from '@/hooks/usePackagings';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { formatShortTime } from '@/utils/formatDate';
 import { formatStockDisplay, getLowStockThresholdUnits, getEffectiveStockUnits } from '@/utils/stockDisplay';
+import {
+  calculateInventorySpend,
+  estimateCogsFromCostTimeline,
+  filterUpdatesByDateRange,
+  getRangeDates,
+  type MetricRange
+} from '@/utils/metrics';
 
 function greeting(name: string) {
   const hour = new Date().getHours();
@@ -32,8 +39,9 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { products } = useProducts();
   const { packagings } = usePackagings();
-  const today = new Date().toISOString().slice(0, 10);
-  const { sales: todaySales } = useSalesHistory(today, today);
+  const [range, setRange] = useState<MetricRange>('today');
+  const { startDate, endDate } = getRangeDates(range);
+  const { sales: periodSales } = useSalesHistory(startDate, endDate);
   const { sales: recentSales } = useOwnerRecentSales();
   const { updates: stockUpdates } = useStockUpdates();
 
@@ -42,50 +50,43 @@ export default function DashboardPage() {
     [products]
   );
 
-  const revenue = todaySales.reduce((sum, sale) => sum + Number(sale.total), 0);
-  const salesCount = todaySales.length;
-  const todayStockUpdates = useMemo(
-    () => stockUpdates.filter((update) => update.timestamp.slice(0, 10) === today),
-    [stockUpdates, today]
+  const stockInRange = useMemo(
+    () => filterUpdatesByDateRange(stockUpdates, startDate, endDate),
+    [stockUpdates, startDate, endDate]
   );
-  const inventorySpendToday = todayStockUpdates.reduce(
-    (sum, update) => sum + Number(update.cost_price_per_unit ?? 0) * Number(update.qty_base_units ?? update.qty_added),
-    0
-  );
-  const lastCostByProduct = useMemo(() => {
-    const sorted = [...stockUpdates]
-      .filter((item) => Number(item.cost_price_per_unit ?? 0) > 0)
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-    const map = new Map<string, number>();
-    for (const row of sorted) {
-      if (!map.has(row.product_id)) {
-        map.set(row.product_id, Number(row.cost_price_per_unit ?? 0));
-      }
-    }
-    return map;
-  }, [stockUpdates]);
-  const estimatedCogsToday = todaySales.reduce((sum, sale) => {
-    const qtyUnits = Number(sale.qty_base_units ?? sale.qty);
-    const costPerUnit = lastCostByProduct.get(sale.product_id) ?? 0;
-    return sum + qtyUnits * costPerUnit;
-  }, 0);
-  const estimatedGrossProfitToday = revenue - estimatedCogsToday;
-  const estimatedMarginToday = revenue > 0 ? (estimatedGrossProfitToday / revenue) * 100 : 0;
+  const revenue = periodSales.reduce((sum, sale) => sum + Number(sale.total), 0);
+  const salesCount = periodSales.length;
+  const inventorySpend = calculateInventorySpend(stockInRange);
+  const estimatedCogs = estimateCogsFromCostTimeline(periodSales, stockUpdates);
+  const estimatedGrossProfit = revenue - estimatedCogs;
+  const estimatedMargin = revenue > 0 ? (estimatedGrossProfit / revenue) * 100 : 0;
+  const rangeLabel = range === 'today' ? 'Today' : range === '7d' ? 'Last 7 Days' : 'Last 30 Days';
 
   return (
     <div className="space-y-4 pb-6">
       <Card className="bg-gradient-to-br from-slate-800 to-slate-900">
         <p className="text-sm text-slate-400">{owner ? greeting(owner.name) : 'Welcome back'}</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-50">Store overview</h2>
-        <p className="mt-2 text-sm text-slate-300">Live sales, low stock alerts, and inventory health in one glance.</p>
+        <p className="mt-2 text-sm text-slate-300">Live sales, stock receipts, and margin estimates for {rangeLabel.toLowerCase()}.</p>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <Button variant={range === 'today' ? 'primary' : 'secondary'} onClick={() => setRange('today')}>
+            Today
+          </Button>
+          <Button variant={range === '7d' ? 'primary' : 'secondary'} onClick={() => setRange('7d')}>
+            7D
+          </Button>
+          <Button variant={range === '30d' ? 'primary' : 'secondary'} onClick={() => setRange('30d')}>
+            30D
+          </Button>
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <SummaryCard title="Today's Revenue" value={formatCurrency(revenue)} accent />
+        <SummaryCard title={`${rangeLabel} Revenue`} value={formatCurrency(revenue)} accent />
         <SummaryCard title="Sales Count" value={`${salesCount}`} />
-        <SummaryCard title="Inventory Spend" value={formatCurrency(inventorySpendToday)} />
-        <SummaryCard title="Gross Profit (Est.)" value={formatCurrency(estimatedGrossProfitToday)} />
-        <SummaryCard title="Gross Margin (Est.)" value={`${estimatedMarginToday.toFixed(1)}%`} />
+        <SummaryCard title="Inventory Spend" value={formatCurrency(inventorySpend)} />
+        <SummaryCard title="Gross Profit (Est.)" value={formatCurrency(estimatedGrossProfit)} />
+        <SummaryCard title="Gross Margin (Est.)" value={`${estimatedMargin.toFixed(1)}%`} />
         <SummaryCard title="Low Stock Items" value={`${lowStockProducts.length}`} />
       </div>
 
