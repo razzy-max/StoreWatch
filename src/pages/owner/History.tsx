@@ -8,10 +8,13 @@ import { formatCurrency } from '@/utils/formatCurrency';
 import { formatDateRangeLabel, formatDateTime } from '@/utils/formatDate';
 import { calculateInventorySpend, estimateCogsFromCostTimeline } from '@/utils/metrics';
 
+type HistoryView = 'overview' | 'sales' | 'stock';
+
 export default function HistoryPage() {
   const today = new Date().toISOString().slice(0, 10);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+  const [view, setView] = useState<HistoryView>('overview');
   const { sales, loading } = useSalesHistory(startDate, endDate);
   const { updates } = useStockUpdates();
 
@@ -75,6 +78,18 @@ export default function HistoryPage() {
             30D
           </Button>
         </div>
+
+        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-700 bg-slate-900/30 p-1">
+          <Button variant={view === 'overview' ? 'primary' : 'ghost'} onClick={() => setView('overview')}>
+            Overview
+          </Button>
+          <Button variant={view === 'sales' ? 'primary' : 'ghost'} onClick={() => setView('sales')}>
+            Sales
+          </Button>
+          <Button variant={view === 'stock' ? 'primary' : 'ghost'} onClick={() => setView('stock')}>
+            Stock
+          </Button>
+        </div>
       </Card>
 
       <Card>
@@ -113,57 +128,80 @@ export default function HistoryPage() {
         </Button>
       </div>
 
-      {loading ? (
-        <Card className="text-sm text-slate-400">Loading sales history...</Card>
-      ) : sales.length === 0 ? (
-        <EmptyState icon={ReceiptText} title="No sales for this date range" message="Try a different period or refresh when back online." />
-      ) : (
-        <div className="space-y-3">
-          {sales.map((sale) => (
-            <Card key={sale.id}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-slate-50">{sale.product_name ?? 'Product'}</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {formatDateTime(sale.timestamp)} · {sale.employee_name ?? 'Employee'} · Qty {sale.qty} {sale.packaging_label ?? 'unit'}(s)
-                  </p>
-                </div>
-                <p className="font-bold text-amberAccent">{formatCurrency(Number(sale.total))}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <Card className="space-y-3">
-        <h3 className="text-lg font-bold text-slate-50">Stocking Activity</h3>
-        {stockInRange.length === 0 ? (
-          <EmptyState icon={ReceiptText} title="No stock receipts in this range" message="Stock receipts will appear here when recorded." />
-        ) : (
-          <div className="space-y-2">
-            {stockInRange.map((update) => {
-              const units = Number(update.qty_base_units ?? update.qty_added);
-              const cost = Number(update.cost_price_per_unit ?? 0);
-              return (
-                <div key={update.id} className="rounded-2xl border border-slate-700 bg-slate-900/40 px-4 py-3">
+      {(view === 'overview' || view === 'sales') && (
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-slate-50">Sales History</h3>
+              <p className="text-sm text-slate-400">Sales recorded within the selected range.</p>
+            </div>
+            <ReceiptText className="h-5 w-5 text-amberAccent" />
+          </div>
+          {loading ? (
+            <p className="text-sm text-slate-400">Loading sales history...</p>
+          ) : sales.length === 0 ? (
+            <EmptyState icon={ReceiptText} title="No sales for this date range" message="Try a different period or refresh when back online." />
+          ) : (
+            <div className="space-y-3">
+              {sales.map((sale) => (
+                <Card key={sale.id}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-slate-50">{update.product_name ?? 'Product'}</p>
+                      <p className="font-semibold text-slate-50">{sale.product_name ?? 'Product'}</p>
                       <p className="mt-1 text-sm text-slate-400">
-                        {formatDateTime(update.timestamp)} · {update.employee_name ?? 'Employee'} · +{update.qty_added} {update.packaging_label ?? 'unit'}(s)
+                        {formatDateTime(sale.timestamp)} · {sale.employee_name ?? 'Employee'} · Qty {sale.qty} {sale.packaging_label ?? 'package'}(s)
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-amberAccent">{cost > 0 ? formatCurrency(cost * units) : 'No cost'}</p>
-                      <p className="text-xs text-slate-400">{cost > 0 ? `${formatCurrency(cost)}/unit` : 'Cost not recorded'}</p>
+                    <p className="font-bold text-amberAccent">{formatCurrency(Number(sale.total))}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {(view === 'overview' || view === 'stock') && (
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-slate-50">Stocking Activity</h3>
+              <p className="text-sm text-slate-400">Purchase receipts, quantities, and package costs.</p>
+            </div>
+            <ReceiptText className="h-5 w-5 text-amberAccent" />
+          </div>
+          {stockInRange.length === 0 ? (
+            <EmptyState icon={ReceiptText} title="No stock receipts in this range" message="Stock receipts will appear here when recorded." />
+          ) : (
+            <div className="space-y-2">
+              {stockInRange.map((update) => {
+                const packages = Number(update.qty_added);
+                const packageCost = Number(update.cost_price_per_package ?? update.cost_price_per_unit ?? 0);
+                const packageUnits = Number(update.packaging_units_per_package ?? 1);
+                const totalCost = packageCost * packages;
+                return (
+                  <div key={update.id} className="rounded-2xl border border-slate-700 bg-slate-900/40 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-50">{update.product_name ?? 'Product'}</p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {formatDateTime(update.timestamp)} · {update.employee_name ?? 'Employee'} · +{packages} {update.packaging_label ?? 'package'}(s)
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-amberAccent">{packageCost > 0 ? formatCurrency(totalCost) : 'No cost'}</p>
+                        <p className="text-xs text-slate-400">
+                          {packageCost > 0 ? `${formatCurrency(packageCost)}/${update.packaging_label ?? 'package'} × ${packages} (${packageUnits * packages} base units)` : 'Cost not recorded'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
 
     </div>
   );

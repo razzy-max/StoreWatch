@@ -164,20 +164,24 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-2">
             {stockUpdates.slice(0, 8).map((update) => {
-              const units = Number(update.qty_base_units ?? update.qty_added);
-              const cost = Number(update.cost_price_per_unit ?? 0);
+              const packages = Number(update.qty_added);
+              const packageCost = Number(update.cost_price_per_package ?? update.cost_price_per_unit ?? 0);
+              const packageUnits = Number(update.packaging_units_per_package ?? 1);
+              const totalCost = packageCost * packages;
               return (
                 <div key={update.id} className="rounded-2xl border border-slate-700 bg-slate-900/40 px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-slate-50">{update.product_name ?? 'Product'}</p>
                       <p className="text-sm text-slate-400">
-                        +{update.qty_added} {update.packaging_label ?? 'unit'}(s) · {update.employee_name ?? 'Employee'} · {formatShortTime(update.timestamp)}
+                        +{packages} {update.packaging_label ?? 'package'}(s) · {update.employee_name ?? 'Employee'} · {formatShortTime(update.timestamp)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-amberAccent">{cost > 0 ? formatCurrency(cost * units) : 'No cost'}</p>
-                      <p className="text-xs text-slate-400">{cost > 0 ? `${formatCurrency(cost)}/unit` : 'Cost not recorded'}</p>
+                      <p className="font-bold text-amberAccent">{packageCost > 0 ? formatCurrency(totalCost) : 'No cost'}</p>
+                      <p className="text-xs text-slate-400">
+                        {packageCost > 0 ? `${formatCurrency(packageCost)}/${update.packaging_label ?? 'package'} × ${packages} = ${packageUnits * packages} base units` : 'Cost not recorded'}
+                      </p>
                     </div>
                   </div>
                 </div>

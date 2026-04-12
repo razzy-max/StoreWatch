@@ -24,9 +24,9 @@ export function filterUpdatesByDateRange(updates: StockUpdateView[], startDate: 
 
 export function calculateInventorySpend(updates: StockUpdateView[]): number {
   return updates.reduce((sum, update) => {
-    const cost = Number(update.cost_price_per_unit ?? 0);
-    const units = Number(update.qty_base_units ?? update.qty_added);
-    return sum + cost * units;
+    const costPerPackage = Number(update.cost_price_per_package ?? update.cost_price_per_unit ?? 0);
+    const packages = Number(update.qty_added);
+    return sum + costPerPackage * packages;
   }, 0);
 }
 
@@ -34,7 +34,9 @@ export function estimateCogsFromCostTimeline(sales: SaleView[], updates: StockUp
   const updatesByProduct = new Map<string, StockUpdateView[]>();
 
   for (const update of updates) {
-    const cost = Number(update.cost_price_per_unit ?? 0);
+    const costPerPackage = Number(update.cost_price_per_package ?? update.cost_price_per_unit ?? 0);
+    const unitsPerPackage = Number(update.packaging_units_per_package ?? 1);
+    const cost = unitsPerPackage > 0 ? costPerPackage / unitsPerPackage : 0;
     if (cost <= 0) {
       continue;
     }
@@ -56,7 +58,9 @@ export function estimateCogsFromCostTimeline(sales: SaleView[], updates: StockUp
 
     for (let i = productUpdates.length - 1; i >= 0; i -= 1) {
       if (productUpdates[i].timestamp <= sale.timestamp) {
-        matchedCost = Number(productUpdates[i].cost_price_per_unit ?? 0);
+        const costPerPackage = Number(productUpdates[i].cost_price_per_package ?? productUpdates[i].cost_price_per_unit ?? 0);
+        const unitsPerPackage = Number(productUpdates[i].packaging_units_per_package ?? 1);
+        matchedCost = unitsPerPackage > 0 ? costPerPackage / unitsPerPackage : 0;
         break;
       }
     }

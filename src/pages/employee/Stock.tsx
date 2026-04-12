@@ -60,7 +60,7 @@ export default function StockPage() {
   const [selectedProduct, setSelectedProduct] = useState<ProductRecord | null>(null);
   const [selectedPackaging, setSelectedPackaging] = useState<ProductPackagingRecord | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [costPrice, setCostPrice] = useState('');
+  const [costPricePerPackage, setCostPricePerPackage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [manualError, setManualError] = useState('');
@@ -113,7 +113,7 @@ export default function StockPage() {
         packaging: selectedPackaging,
         qtyAdded: quantity,
         recordedBy: employee.id,
-        costPricePerUnit: costPrice ? Number(costPrice) : undefined
+        costPricePerPackage: costPricePerPackage ? Number(costPricePerPackage) : undefined
       });
       success('Stock updated', `${quantity} item(s) added to stock.`);
       setCompleted(true);
@@ -130,7 +130,7 @@ export default function StockPage() {
         onReset={() => {
           setCompleted(false);
           setQuantity(1);
-          setCostPrice('');
+          setCostPricePerPackage('');
           setSelectedProduct(null);
           setSelectedPackaging(null);
         }}
@@ -185,14 +185,14 @@ export default function StockPage() {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-slate-400">Cost Per Unit (Optional)</label>
+          <label className="mb-2 block text-sm text-slate-400">Cost Per Package (Optional)</label>
           <input
             type="number"
             min="0"
             step="0.01"
-            value={costPrice}
-            onChange={(e) => setCostPrice(e.target.value)}
-            placeholder="Enter cost price per unit"
+            value={costPricePerPackage}
+            onChange={(e) => setCostPricePerPackage(e.target.value)}
+            placeholder="Enter the purchase price for 1 crate/carton/case"
             className="h-12 w-full rounded-xl border border-slate-700 bg-navy px-4 text-slate-50 outline-none placeholder-slate-600 focus:border-amberAccent"
           />
         </div>

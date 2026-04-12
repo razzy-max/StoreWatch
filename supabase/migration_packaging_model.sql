@@ -107,7 +107,8 @@ alter table public.sales
 alter table public.stock_updates
   add column if not exists packaging_id uuid references public.product_packaging(id),
   add column if not exists qty_base_units integer,
-  add column if not exists cost_price_per_unit numeric;
+  add column if not exists cost_price_per_unit numeric,
+  add column if not exists cost_price_per_package numeric;
 
 -- Backfill for existing rows.
 update public.sales

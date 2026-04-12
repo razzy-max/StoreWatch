@@ -25,7 +25,7 @@ export default function LogPage() {
 
   const revenue = enrichedSales.reduce((sum, sale) => sum + Number(sale.total), 0);
   const stockValue = stockUpdates.reduce(
-    (sum, item) => sum + Number(item.cost_price_per_unit ?? 0) * Number(item.qty_base_units ?? item.qty_added),
+    (sum, item) => sum + Number(item.cost_price_per_package ?? item.cost_price_per_unit ?? 0) * Number(item.qty_added),
     0
   );
 
@@ -81,12 +81,12 @@ export default function LogPage() {
                   <div>
                     <p className="text-base font-semibold text-slate-50">{item.product_name ?? 'Product'}</p>
                     <p className="mt-1 text-sm text-slate-400">
-                      +{item.qty_added} {item.packaging_label ?? 'unit'}(s) · {formatShortTime(item.timestamp)}
+                      +{item.qty_added} {item.packaging_label ?? 'package'}(s) · {formatShortTime(item.timestamp)}
                     </p>
                   </div>
                   <p className="text-base font-bold text-emerald-300">
-                    {Number(item.cost_price_per_unit ?? 0) > 0
-                      ? formatCurrency(Number(item.cost_price_per_unit) * Number(item.qty_base_units ?? item.qty_added))
+                    {Number(item.cost_price_per_package ?? item.cost_price_per_unit ?? 0) > 0
+                      ? formatCurrency(Number(item.cost_price_per_package ?? item.cost_price_per_unit) * Number(item.qty_added))
                       : 'No cost'}
                   </p>
                 </div>

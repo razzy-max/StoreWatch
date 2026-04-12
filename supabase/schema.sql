@@ -35,7 +35,8 @@ create table if not exists public.stock_updates (
   recorded_by uuid references public.users (id) not null,
   timestamp timestamptz default now(),
   synced boolean default false,
-  cost_price_per_unit numeric
+  cost_price_per_unit numeric,
+  cost_price_per_package numeric
 );
 
 alter table public.users enable row level security;

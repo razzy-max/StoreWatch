@@ -34,7 +34,6 @@ export default function ProductsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
   const [packageToDelete, setPackageToDelete] = useState<ProductPackagingRecord | null>(null);
-  const [showPackagingModal, setShowPackagingModal] = useState(false);
   const [justSavedProduct, setJustSavedProduct] = useState<ProductRecord | null>(null);
 
   const availableCategories = useMemo(
@@ -43,8 +42,8 @@ export default function ProductsPage() {
   );
 
   const productPackagings = useMemo(
-    () => packagings.filter((p) => p.product_id === editingProduct?.id),
-    [packagings, editingProduct?.id]
+    () => packagings.filter((p) => p.product_id === (justSavedProduct?.id || editingProduct?.id)),
+    [packagings, justSavedProduct?.id, editingProduct?.id]
   );
 
   function validate(current: ProductFormValues) {
@@ -92,10 +91,10 @@ export default function ProductsPage() {
       // For new products, show packaging editor
       if (!editingProduct) {
         setJustSavedProduct(savedProduct);
-        setShowPackagingModal(true);
       } else {
         setEditingProduct(null);
         setShowAdd(false);
+        setJustSavedProduct(null);
       }
     } catch (error) {
       pushError('Save failed', friendlyError(error, 'Unable to save product.'));
@@ -224,7 +223,6 @@ export default function ProductsPage() {
                   variant="secondary"
                   onClick={() => {
                     setEditingProduct(product);
-                    setShowPackagingModal(true);
                   }}
                   fullWidth
                 >
@@ -251,7 +249,7 @@ export default function ProductsPage() {
 
       <Modal
         open={Boolean(editingProduct) || showAdd}
-        title={editingProduct ? 'Edit Product' : 'Add Product'}
+        title={editingProduct ? 'Edit Product and Tiers' : 'Add Product and Tiers'}
         onClose={() => {
           setEditingProduct(null);
           setShowAdd(false);
@@ -268,28 +266,26 @@ export default function ProductsPage() {
           </div>
         }
       >
-        <ProductForm values={draft} errors={errors} onChange={setDraft} categories={availableCategories} />
-      </Modal>
+        <div className="space-y-4">
+          <ProductForm values={draft} errors={errors} onChange={setDraft} categories={availableCategories} />
 
-      <Modal
-        open={showPackagingModal && !!editingProduct}
-        title={'Manage Pricing Tiers for ' + (editingProduct?.name || '')}
-        onClose={() => { setShowPackagingModal(false); setEditingProduct(null); }}
-        footer={
-          <div className="flex gap-3">
-            <Button fullWidth onClick={() => { setShowPackagingModal(false); }}>
-              Done
-            </Button>
+          <div className="rounded-2xl border border-slate-700 bg-slate-900/30 p-3">
+            <p className="text-sm font-semibold text-slate-50">Pricing tiers</p>
+            <p className="mt-1 text-xs text-slate-400">Save the product details first, then add the package tiers below.</p>
           </div>
-        }
-      >
-        {editingProduct && (
+
+          {justSavedProduct || editingProduct ? (
           <PackagingEditor
             packagings={productPackagings}
             onAdd={handleAddPackaging}
             onRemove={(id) => setPackageToDelete(productPackagings.find((p) => p.id === id) || null)}
           />
-        )}
+          ) : (
+            <Card className="border border-dashed border-slate-700 bg-slate-900/20">
+              <p className="text-sm text-slate-400">Add pricing tiers after the product is saved.</p>
+            </Card>
+          )}
+        </div>
       </Modal>
 
       <ConfirmDialog

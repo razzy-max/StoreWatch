@@ -55,6 +55,7 @@ export interface StockUpdateRecord {
   packaging_id?: string | null;
   qty_base_units?: number | null;
   cost_price_per_unit?: number | null;
+  cost_price_per_package?: number | null;
 }
 
 export interface EmployeeSession {
@@ -79,4 +80,5 @@ export interface StockUpdateView extends StockUpdateRecord {
   product_name?: string;
   employee_name?: string;
   packaging_label?: string;
+  packaging_units_per_package?: number;
 }
