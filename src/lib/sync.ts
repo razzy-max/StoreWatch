@@ -261,6 +261,7 @@ export async function recordStockUpdate(input: {
   qtyAdded: number;
   recordedBy: string;
   synced?: boolean;
+  costPricePerUnit?: number;
 }) {
   const timestamp = new Date().toISOString();
   const qtyBaseUnits = input.qtyAdded * Number(input.packaging.units_per_package);
@@ -273,7 +274,8 @@ export async function recordStockUpdate(input: {
     timestamp,
     synced: Boolean(input.synced),
     packaging_id: input.packaging.id,
-    qty_base_units: qtyBaseUnits
+    qty_base_units: qtyBaseUnits,
+    cost_price_per_unit: input.costPricePerUnit || null
   };
 
   if (navigator.onLine) {
@@ -285,7 +287,8 @@ export async function recordStockUpdate(input: {
       timestamp: stockUpdate.timestamp,
       synced: true,
       packaging_id: stockUpdate.packaging_id,
-      qty_base_units: stockUpdate.qty_base_units
+      qty_base_units: stockUpdate.qty_base_units,
+      cost_price_per_unit: stockUpdate.cost_price_per_unit
     });
 
     if (stockError) {

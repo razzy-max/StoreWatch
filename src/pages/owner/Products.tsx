@@ -42,6 +42,11 @@ export default function ProductsPage() {
     [products]
   );
 
+  const productPackagings = useMemo(
+    () => packagings.filter((p) => p.product_id === editingProduct?.id),
+    [packagings, editingProduct?.id]
+  );
+
   function validate(current: ProductFormValues) {
     const nextErrors: Partial<Record<keyof ProductFormValues, string>> = {};
     if (!current.name.trim()) nextErrors.name = 'Name is required.';
@@ -182,27 +187,62 @@ export default function ProductsPage() {
       </Card>
 
       <div className="space-y-3">
-        {products.map((product) => (
-          <Card key={product.id} className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-base font-semibold text-slate-50">{product.name}</p>
-                <p className="text-sm text-slate-400">{product.category} · {formatCurrency(Number(product.unit_price))}</p>
+        {products.map((product) => {
+          const tiers = packagings.filter((p) => p.product_id === product.id);
+          return (
+            <Card key={product.id} className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-base font-semibold text-slate-50">{product.name}</p>
+                  <p className="text-sm text-slate-400">{product.category} · {formatCurrency(Number(product.unit_price))}</p>
+                </div>
+                <p className="text-sm text-slate-300">Stock {product.stock_qty}</p>
               </div>
-              <p className="text-sm text-slate-300">Stock {product.stock_qty}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" fullWidth onClick={() => openEdit(product)}>
-                <Edit3 className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-              <Button variant="danger" fullWidth onClick={() => setDeleteTarget(product)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            </div>
-          </Card>
-        ))}
+
+              {tiers.length > 0 && (
+                <div className="rounded-lg border border-slate-700 bg-slate-800/30 p-2">
+                  <p className="mb-2 text-xs font-medium text-slate-400">Pricing Tiers:</p>
+                  <div className="space-y-1">
+                    {tiers.map((pkg) => (
+                      <div key={pkg.id} className="flex items-center justify-between rounded px-2 py-1 text-xs text-slate-300 hover:bg-slate-700/50">
+                        <span>{pkg.label} ({pkg.units_per_package}) @ {formatCurrency(Number(pkg.selling_price_per_package))}</span>
+                        <button
+                          onClick={() => setPackageToDelete(pkg)}
+                          className="opacity-0 transition-opacity hover:opacity-100"
+                          aria-label="Delete packaging"
+                        >
+                          <Trash2 className="h-3 w-3 text-red-400" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setEditingProduct(product);
+                    setShowPackagingModal(true);
+                  }}
+                  fullWidth
+                >
+                  <Edit3 className="mr-2 h-4 w-4" />
+                  Manage Tiers
+                </Button>
+                <Button variant="secondary" fullWidth onClick={() => openEdit(product)}>
+                  <Edit3 className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+                <Button variant="danger" fullWidth onClick={() => setDeleteTarget(product)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       <Button className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full shadow-soft" onClick={() => { setShowAdd(true); setEditingProduct(null); setDraft(emptyForm()); setErrors({}); }} aria-label="Add product">
@@ -215,10 +255,11 @@ export default function ProductsPage() {
         onClose={() => {
           setEditingProduct(null);
           setShowAdd(false);
+          setJustSavedProduct(null);
         }}
         footer={
           <div className="flex gap-3">
-            <Button variant="secondary" fullWidth onClick={() => { setEditingProduct(null); setShowAdd(false); }}>
+            <Button variant="secondary" fullWidth onClick={() => { setEditingProduct(null); setShowAdd(false); setJustSavedProduct(null); }}>
               Cancel
             </Button>
             <Button fullWidth onClick={handleSave} disabled={saving}>
@@ -230,6 +271,27 @@ export default function ProductsPage() {
         <ProductForm values={draft} errors={errors} onChange={setDraft} categories={availableCategories} />
       </Modal>
 
+      <Modal
+        open={showPackagingModal && !!editingProduct}
+        title={'Manage Pricing Tiers for ' + (editingProduct?.name || '')}
+        onClose={() => { setShowPackagingModal(false); setEditingProduct(null); }}
+        footer={
+          <div className="flex gap-3">
+            <Button fullWidth onClick={() => { setShowPackagingModal(false); }}>
+              Done
+            </Button>
+          </div>
+        }
+      >
+        {editingProduct && (
+          <PackagingEditor
+            packagings={productPackagings}
+            onAdd={handleAddPackaging}
+            onRemove={(id) => setPackageToDelete(productPackagings.find((p) => p.id === id) || null)}
+          />
+        )}
+      </Modal>
+
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete Product"
@@ -238,6 +300,16 @@ export default function ProductsPage() {
         confirmTone="danger"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={Boolean(packageToDelete)}
+        title="Delete Pricing Tier"
+        message={'Delete ' + (packageToDelete?.label || 'this tier') + '? This action cannot be undone.'}
+        confirmLabel={saving ? 'Deleting...' : 'Delete'}
+        confirmTone="danger"
+        onCancel={() => setPackageToDelete(null)}
+        onConfirm={handleDeletePackaging}
       />
     </div>
   );

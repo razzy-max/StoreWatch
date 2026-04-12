@@ -54,6 +54,7 @@ export interface StockUpdateRecord {
   synced: boolean;
   packaging_id?: string | null;
   qty_base_units?: number | null;
+  cost_price_per_unit?: number | null;
 }
 
 export interface EmployeeSession {

@@ -60,6 +60,7 @@ export default function StockPage() {
   const [selectedProduct, setSelectedProduct] = useState<ProductRecord | null>(null);
   const [selectedPackaging, setSelectedPackaging] = useState<ProductPackagingRecord | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [costPrice, setCostPrice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [manualError, setManualError] = useState('');
@@ -107,7 +108,13 @@ export default function StockPage() {
 
     setSubmitting(true);
     try {
-      await recordStockUpdate({ product: activeProduct, packaging: selectedPackaging, qtyAdded: quantity, recordedBy: employee.id });
+      await recordStockUpdate({
+        product: activeProduct,
+        packaging: selectedPackaging,
+        qtyAdded: quantity,
+        recordedBy: employee.id,
+        costPricePerUnit: costPrice ? Number(costPrice) : undefined
+      });
       success('Stock updated', `${quantity} item(s) added to stock.`);
       setCompleted(true);
     } catch (error) {
@@ -118,7 +125,17 @@ export default function StockPage() {
   }
 
   if (completed) {
-    return <SuccessState onReset={() => setCompleted(false)} />;
+    return (
+      <SuccessState
+        onReset={() => {
+          setCompleted(false);
+          setQuantity(1);
+          setCostPrice('');
+          setSelectedProduct(null);
+          setSelectedPackaging(null);
+        }}
+      />
+    );
   }
 
   return (
@@ -165,6 +182,19 @@ export default function StockPage() {
         <div>
           <p className="mb-2 text-sm text-slate-400">Quantity Received</p>
           <QuantityStepper value={quantity} onChange={setQuantity} />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm text-slate-400">Cost Per Unit (Optional)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={costPrice}
+            onChange={(e) => setCostPrice(e.target.value)}
+            placeholder="Enter cost price per unit"
+            className="h-12 w-full rounded-xl border border-slate-700 bg-navy px-4 text-slate-50 outline-none placeholder-slate-600 focus:border-amberAccent"
+          />
         </div>
 
         {manualError ? <p className="text-sm text-red-400">{manualError}</p> : null}
