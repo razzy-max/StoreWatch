@@ -1,6 +1,6 @@
 # StoreWatch
 
-StoreWatch is a mobile-first Progressive Web App for a drinks and wine retail store. It supports two roles:
+StoreWatch is a mobile-first Progressive Web App for a drinks and wine retail store. It supports wholesale and retail sales with sophisticated inventory tracking. It supports two roles:
 
 - Owner: dashboard, inventory control, sales history, and product management
 - Employee: PIN login, offline-first sales capture, stock intake, and a personal daily log
@@ -10,6 +10,8 @@ The frontend is built with React, Vite, TypeScript, Tailwind CSS, React Router, 
 ## Features
 
 - Mobile-first layout tuned for small screens
+- Wholesale + Retail packaging model with separate pricing tiers
+- Base-unit stock canonicalization for accurate inventory math
 - Owner and employee role flows
 - Supabase Auth for owner login
 - PIN-based employee login
@@ -18,6 +20,7 @@ The frontend is built with React, Vite, TypeScript, Tailwind CSS, React Router, 
 - Live owner dashboard updates through Supabase realtime
 - Product browsing while offline
 - PWA manifest, service worker, and install prompt support
+- Dark/Light theme toggle with system default detection
 - Inline form validation and toast-based error handling
 - Responsive bottom navigation and touch-friendly controls
 
@@ -25,6 +28,7 @@ The frontend is built with React, Vite, TypeScript, Tailwind CSS, React Router, 
 
 - Node.js 18 or newer
 - A free Supabase account
+- (Optional) Vercel or Netlify account for hosting
 
 ## Clone And Install
 
@@ -47,7 +51,8 @@ npm install
 1. Open the Supabase SQL editor.
 2. Paste the contents of `supabase/schema.sql`.
 3. Run the script.
-4. Create the `public.users` rows for your owner and employees.
+4. If migrating from an older version, also run `supabase/migration_packaging_model.sql` for the packaging system.
+5. Create the `public.users` rows for your owner and employees.
 
 ## Environment Variables
 
@@ -92,11 +97,50 @@ values (gen_random_uuid(), 'Employee Name', 'employee', '$2a$10$replace_with_bcr
 npm run dev
 ```
 
+Visit http://localhost:5173 to access the app.
+
+## Theme System
+
+The app supports Light, Dark, and System (default) theme modes. The theme preference is stored in localStorage and persists across sessions. You can toggle themes using the menu button in the top-right corner of the app.
+
 ## Build For Production
 
 ```bash
 npm run build
 ```
+
+This generates the optimized app in the `dist/` directory, ready for deployment.
+
+## Deploy To Vercel (Recommended)
+
+### Option 1: Using Vercel CLI
+
+```bash
+npm install -g vercel
+vercel
+```
+
+Follow the prompts to link your GitHub repo and deploy. Set your environment variables (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`) in the Vercel Dashboard under Project Settings > Environment Variables.
+
+### Option 2: Using GitHub Integration
+
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com) and click "New Project"
+3. Import your GitHub repository
+4. Add the environment variables in the "Environment Variables" section
+5. Click "Deploy"
+
+Vercel will automatically rebuild and deploy on every push to `main` branch.
+
+## Deploy To Netlify
+
+1. Push your code to GitHub
+2. Go to [netlify.com](https://netlify.com) and click "Add new site"
+3. Select "Connect to Git" and choose your repository
+4. Set Build command: `npm run build`
+5. Set Publish directory: `dist`
+6. Add environment variables under "Build & deploy" > "Environment"
+7. Click "Deploy site"
 
 The build output is written to `dist/`.
 
