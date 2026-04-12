@@ -191,10 +191,62 @@ export function useStockUpdates() {
   useEffect(() => {
     let mounted = true;
 
+    async function loadFromCache() {
+      const [cached, products, users, packaging] = await Promise.all([
+        db.stock_updates.orderBy('timestamp').reverse().toArray(),
+        db.products.toArray(),
+        db.table('users').toArray().catch(() => []),
+        db.product_packaging.toArray()
+      ]);
+
+      return cached.map((item: StockUpdateRecord) => ({
+        ...item,
+        product_name: products.find((product: ProductRecord) => product.id === item.product_id)?.name,
+        employee_name: (users as Array<{ id: string; name?: string }>).find((user) => user.id === item.recorded_by)?.name,
+        packaging_label: packaging.find((pkg) => pkg.id === item.packaging_id)?.label
+      }));
+    }
+
     async function load() {
-      const cached = await db.stock_updates.orderBy('timestamp').reverse().toArray();
+      if (!navigator.onLine) {
+        const rows = await loadFromCache();
+        if (mounted) {
+          setUpdates(rows);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('stock_updates')
+        .select('*, product:products(name), employee:users(name), packaging:product_packaging(label)')
+        .order('timestamp', { ascending: false })
+        .limit(200);
+
+      if (error) {
+        const rows = await loadFromCache();
+        if (mounted) {
+          setUpdates(rows);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const rows = (data ?? []).map((row: any) => ({
+        ...(row as StockUpdateView),
+        product_name: Array.isArray((row as { product?: Array<{ name?: string }> }).product)
+          ? (row as { product?: Array<{ name?: string }> }).product?.[0]?.name
+          : (row as { product?: { name?: string } }).product?.name,
+        employee_name: Array.isArray((row as { employee?: Array<{ name?: string }> }).employee)
+          ? (row as { employee?: Array<{ name?: string }> }).employee?.[0]?.name
+          : (row as { employee?: { name?: string } }).employee?.name,
+        packaging_label: Array.isArray((row as { packaging?: Array<{ label?: string }> }).packaging)
+          ? (row as { packaging?: Array<{ label?: string }> }).packaging?.[0]?.label
+          : (row as { packaging?: { label?: string } }).packaging?.label
+      }));
+
       if (mounted) {
-        setUpdates(cached.map((item: StockUpdateRecord) => ({ ...item, product_name: item.product_id, employee_name: item.recorded_by })));
+        setUpdates(rows);
         setLoading(false);
       }
     }

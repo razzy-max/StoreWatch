@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
-import { useSalesHistory } from '@/hooks/useSales';
+import { useSalesHistory, useStockUpdates } from '@/hooks/useSales';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { formatDateRangeLabel, formatDateTime, formatShortTime } from '@/utils/formatDate';
 
@@ -12,14 +12,40 @@ export default function HistoryPage() {
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const { sales, loading } = useSalesHistory(startDate, endDate);
+  const { updates } = useStockUpdates();
 
-  const summary = useMemo(
-    () => ({
-      revenue: sales.reduce((sum, sale) => sum + Number(sale.total), 0),
-      transactions: sales.length
-    }),
-    [sales]
+  const stockInRange = useMemo(
+    () => updates.filter((item) => item.timestamp >= `${startDate}T00:00:00.000Z` && item.timestamp <= `${endDate}T23:59:59.999Z`),
+    [updates, startDate, endDate]
   );
+
+  const summary = useMemo(() => {
+    const revenue = sales.reduce((sum, sale) => sum + Number(sale.total), 0);
+    const inventorySpend = stockInRange.reduce(
+      (sum, update) => sum + Number(update.cost_price_per_unit ?? 0) * Number(update.qty_base_units ?? update.qty_added),
+      0
+    );
+    const lastCostByProduct = new Map<string, number>();
+    for (const update of [...updates].sort((a, b) => b.timestamp.localeCompare(a.timestamp))) {
+      if (!lastCostByProduct.has(update.product_id) && Number(update.cost_price_per_unit ?? 0) > 0) {
+        lastCostByProduct.set(update.product_id, Number(update.cost_price_per_unit ?? 0));
+      }
+    }
+    const estimatedCogs = sales.reduce((sum, sale) => {
+      const costPerUnit = lastCostByProduct.get(sale.product_id) ?? 0;
+      return sum + costPerUnit * Number(sale.qty_base_units ?? sale.qty);
+    }, 0);
+    const estimatedGrossProfit = revenue - estimatedCogs;
+    const estimatedMargin = revenue > 0 ? (estimatedGrossProfit / revenue) * 100 : 0;
+    return {
+      revenue,
+      inventorySpend,
+      estimatedGrossProfit,
+      estimatedMargin,
+      transactions: sales.length,
+      stockReceipts: stockInRange.length
+    };
+  }, [sales, stockInRange, updates]);
 
   return (
     <div className="space-y-4 pb-28">
@@ -72,16 +98,62 @@ export default function HistoryPage() {
         </div>
       )}
 
+      <Card className="space-y-3">
+        <h3 className="text-lg font-bold text-slate-50">Stocking Activity</h3>
+        {stockInRange.length === 0 ? (
+          <EmptyState icon={ReceiptText} title="No stock receipts in this range" message="Stock receipts will appear here when recorded." />
+        ) : (
+          <div className="space-y-2">
+            {stockInRange.map((update) => {
+              const units = Number(update.qty_base_units ?? update.qty_added);
+              const cost = Number(update.cost_price_per_unit ?? 0);
+              return (
+                <div key={update.id} className="rounded-2xl border border-slate-700 bg-slate-900/40 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-50">{update.product_name ?? 'Product'}</p>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {formatDateTime(update.timestamp)} · {update.employee_name ?? 'Employee'} · +{update.qty_added} {update.packaging_label ?? 'unit'}(s)
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-amberAccent">{cost > 0 ? formatCurrency(cost * units) : 'No cost'}</p>
+                      <p className="text-xs text-slate-400">{cost > 0 ? `${formatCurrency(cost)}/unit` : 'Cost not recorded'}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="fixed bottom-24 left-4 right-4 z-20">
         <Card className="border border-slate-700 bg-slatePanel/98 shadow-soft backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
+          <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-3 lg:grid-cols-6">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Total Revenue</p>
               <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.revenue)}</p>
             </div>
-            <div className="text-right">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Inventory Spend</p>
+              <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.inventorySpend)}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Gross Profit (Est.)</p>
+              <p className="text-xl font-bold text-slate-50">{formatCurrency(summary.estimatedGrossProfit)}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Gross Margin (Est.)</p>
+              <p className="text-xl font-bold text-slate-50">{summary.estimatedMargin.toFixed(1)}%</p>
+            </div>
+            <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Transactions</p>
               <p className="text-xl font-bold text-slate-50">{summary.transactions}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Stock Receipts</p>
+              <p className="text-xl font-bold text-slate-50">{summary.stockReceipts}</p>
             </div>
           </div>
         </Card>

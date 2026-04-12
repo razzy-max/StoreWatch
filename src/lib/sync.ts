@@ -392,7 +392,8 @@ export async function syncPendingRecords() {
       timestamp: stockUpdate.timestamp,
       synced: true,
       packaging_id: stockUpdate.packaging_id,
-      qty_base_units: stockUpdate.qty_base_units
+      qty_base_units: stockUpdate.qty_base_units,
+      cost_price_per_unit: stockUpdate.cost_price_per_unit ?? null
     });
 
     if (stockError) {

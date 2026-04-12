@@ -5,7 +5,7 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/hooks/useAuth';
-import { useOwnerRecentSales, useSalesHistory } from '@/hooks/useSales';
+import { useOwnerRecentSales, useSalesHistory, useStockUpdates } from '@/hooks/useSales';
 import { useProducts } from '@/hooks/useProducts';
 import { usePackagings } from '@/hooks/usePackagings';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const today = new Date().toISOString().slice(0, 10);
   const { sales: todaySales } = useSalesHistory(today, today);
   const { sales: recentSales } = useOwnerRecentSales();
+  const { updates: stockUpdates } = useStockUpdates();
 
   const lowStockProducts = useMemo(
     () => products.filter((product) => getEffectiveStockUnits(product) <= getLowStockThresholdUnits(product)),
@@ -43,6 +44,33 @@ export default function DashboardPage() {
 
   const revenue = todaySales.reduce((sum, sale) => sum + Number(sale.total), 0);
   const salesCount = todaySales.length;
+  const todayStockUpdates = useMemo(
+    () => stockUpdates.filter((update) => update.timestamp.slice(0, 10) === today),
+    [stockUpdates, today]
+  );
+  const inventorySpendToday = todayStockUpdates.reduce(
+    (sum, update) => sum + Number(update.cost_price_per_unit ?? 0) * Number(update.qty_base_units ?? update.qty_added),
+    0
+  );
+  const lastCostByProduct = useMemo(() => {
+    const sorted = [...stockUpdates]
+      .filter((item) => Number(item.cost_price_per_unit ?? 0) > 0)
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    const map = new Map<string, number>();
+    for (const row of sorted) {
+      if (!map.has(row.product_id)) {
+        map.set(row.product_id, Number(row.cost_price_per_unit ?? 0));
+      }
+    }
+    return map;
+  }, [stockUpdates]);
+  const estimatedCogsToday = todaySales.reduce((sum, sale) => {
+    const qtyUnits = Number(sale.qty_base_units ?? sale.qty);
+    const costPerUnit = lastCostByProduct.get(sale.product_id) ?? 0;
+    return sum + qtyUnits * costPerUnit;
+  }, 0);
+  const estimatedGrossProfitToday = revenue - estimatedCogsToday;
+  const estimatedMarginToday = revenue > 0 ? (estimatedGrossProfitToday / revenue) * 100 : 0;
 
   return (
     <div className="space-y-4 pb-6">
@@ -52,9 +80,12 @@ export default function DashboardPage() {
         <p className="mt-2 text-sm text-slate-300">Live sales, low stock alerts, and inventory health in one glance.</p>
       </Card>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <SummaryCard title="Today's Revenue" value={formatCurrency(revenue)} accent />
         <SummaryCard title="Sales Count" value={`${salesCount}`} />
+        <SummaryCard title="Inventory Spend" value={formatCurrency(inventorySpendToday)} />
+        <SummaryCard title="Gross Profit (Est.)" value={formatCurrency(estimatedGrossProfitToday)} />
+        <SummaryCard title="Gross Margin (Est.)" value={`${estimatedMarginToday.toFixed(1)}%`} />
         <SummaryCard title="Low Stock Items" value={`${lowStockProducts.length}`} />
       </div>
 
@@ -117,6 +148,42 @@ export default function DashboardPage() {
             ))
           )}
         </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-50">Recent Stock Activity</h3>
+            <p className="text-sm text-slate-400">Incoming stock and purchase costs.</p>
+          </div>
+          <ShoppingBag className="h-5 w-5 text-amberAccent" />
+        </div>
+        {stockUpdates.length === 0 ? (
+          <EmptyState icon={ShoppingBag} title="No stock updates yet" message="Stock receipts will appear here." />
+        ) : (
+          <div className="space-y-2">
+            {stockUpdates.slice(0, 8).map((update) => {
+              const units = Number(update.qty_base_units ?? update.qty_added);
+              const cost = Number(update.cost_price_per_unit ?? 0);
+              return (
+                <div key={update.id} className="rounded-2xl border border-slate-700 bg-slate-900/40 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-50">{update.product_name ?? 'Product'}</p>
+                      <p className="text-sm text-slate-400">
+                        +{update.qty_added} {update.packaging_label ?? 'unit'}(s) · {update.employee_name ?? 'Employee'} · {formatShortTime(update.timestamp)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-amberAccent">{cost > 0 ? formatCurrency(cost * units) : 'No cost'}</p>
+                      <p className="text-xs text-slate-400">{cost > 0 ? `${formatCurrency(cost)}/unit` : 'Cost not recorded'}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
     </div>
   );
