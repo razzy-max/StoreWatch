@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
   --color-bg-primary: #0f172a;
   --color-accent: #f59e0b;
   --color-card-bg: #1e293b;
@@ -13,7 +13,14 @@
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
   font-family: 'Inter', sans-serif;
-  background: var(--color-bg-primary);
+}
+
+html.light {
+  --color-bg-primary: #f8fafc;
+  --color-accent: #f59e0b;
+  --color-card-bg: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-muted: #64748b;
 }
 
 html {
@@ -24,8 +31,17 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(15, 23, 42, 1) 100%);
+  background: var(--color-bg-primary);
   color: var(--color-text-primary);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+html.dark body {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(15, 23, 42, 1) 100%);
+}
+
+html.light body {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(248, 250, 252, 1) 100%);
 }
 
 * {
@@ -46,5 +62,25 @@ body {
   textarea,
   button {
     font: inherit;
+  }
+
+  html.light input,
+  html.light select,
+  html.light textarea {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+
+  html.light input::placeholder,
+  html.light textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  html.light input:focus,
+  html.light select:focus,
+  html.light textarea:focus {
+    border-color: #f59e0b;
+    outline: none;
   }
 }

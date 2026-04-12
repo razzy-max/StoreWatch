@@ -5,11 +5,13 @@ import { Card } from '@/components/Card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Modal } from '@/components/Modal';
 import { ProductForm, type ProductFormValues } from '@/components/ProductForm';
+import { PackagingEditor, type PackagingFormValues } from '@/components/PackagingEditor';
 import { useToast } from '@/components/ToastProvider';
 import { useProducts } from '@/hooks/useProducts';
-import { deleteProduct, friendlyError, refreshProductsFromSupabase, saveProduct } from '@/lib/sync';
+import { usePackagings } from '@/hooks/usePackagings';
+import { deleteProduct, deletePackaging, friendlyError, refreshProductsFromSupabase, saveProduct, savePackaging } from '@/lib/sync';
 import { formatCurrency } from '@/utils/formatCurrency';
-import type { ProductRecord } from '@/types/models';
+import type { ProductRecord, ProductPackagingRecord } from '@/types/models';
 
 function emptyForm(): ProductFormValues {
   return {
@@ -23,6 +25,7 @@ function emptyForm(): ProductFormValues {
 
 export default function ProductsPage() {
   const { products } = useProducts();
+  const { packagings } = usePackagings();
   const { error: pushError, success } = useToast();
   const [editingProduct, setEditingProduct] = useState<ProductRecord | null>(null);
   const [draft, setDraft] = useState<ProductFormValues>(emptyForm());
@@ -30,6 +33,9 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
+  const [packageToDelete, setPackageToDelete] = useState<ProductPackagingRecord | null>(null);
+  const [showPackagingModal, setShowPackagingModal] = useState(false);
+  const [justSavedProduct, setJustSavedProduct] = useState<ProductRecord | null>(null);
 
   const availableCategories = useMemo(
     () => Array.from(new Set(products.map((product) => product.category))).sort((a, b) => a.localeCompare(b)),
@@ -49,6 +55,7 @@ export default function ProductsPage() {
 
   function openEdit(product: ProductRecord) {
     setEditingProduct(product);
+    setJustSavedProduct(null);
     setDraft({
       name: product.name,
       category: product.category,
@@ -67,7 +74,7 @@ export default function ProductsPage() {
 
     setSaving(true);
     try {
-      await saveProduct({
+      const savedProduct = await saveProduct({
         id: editingProduct?.id,
         name: draft.name.trim(),
         category: draft.category,
@@ -76,10 +83,52 @@ export default function ProductsPage() {
         low_stock_threshold: Number(draft.low_stock_threshold)
       });
       success('Saved', editingProduct ? 'Product updated successfully.' : 'Product created successfully.');
-      setEditingProduct(null);
-      setShowAdd(false);
+      
+      // For new products, show packaging editor
+      if (!editingProduct) {
+        setJustSavedProduct(savedProduct);
+        setShowPackagingModal(true);
+      } else {
+        setEditingProduct(null);
+        setShowAdd(false);
+      }
     } catch (error) {
       pushError('Save failed', friendlyError(error, 'Unable to save product.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAddPackaging(packaging: PackagingFormValues) {
+    const product = justSavedProduct || editingProduct;
+    if (!product) return;
+
+    setSaving(true);
+    try {
+      await savePackaging({
+        product_id: product.id,
+        label: packaging.label,
+        units_per_package: Number(packaging.units_per_package),
+        selling_price_per_package: Number(packaging.selling_price_per_package)
+      });
+      success('Added', packaging.label + ' pricing tier added.');
+    } catch (error) {
+      pushError('Failed to add packaging', friendlyError(error, 'Unable to add pricing tier.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeletePackaging() {
+    if (!packageToDelete) return;
+
+    setSaving(true);
+    try {
+      await deletePackaging(packageToDelete.id);
+      success('Deleted', packageToDelete.label + ' removed.');
+      setPackageToDelete(null);
+    } catch (error) {
+      pushError('Failed to delete', friendlyError(error, 'Unable to delete pricing tier.'));
     } finally {
       setSaving(false);
     }

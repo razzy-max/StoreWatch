@@ -42,11 +42,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Apply to DOM
     const html = document.documentElement;
-    if (effective === 'dark') {
-      html.classList.add('dark');
-    } else {
-      html.classList.remove('dark');
-    }
+    html.classList.remove('light', 'dark');
+    html.classList.add(effective);
 
     // Store preference
     localStorage.setItem('theme', theme);
@@ -59,13 +56,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
       const isDark = mediaQuery.matches;
-      setEffectiveTheme(isDark ? 'dark' : 'light');
+      const effective = isDark ? 'dark' : 'light';
+      setEffectiveTheme(effective);
       const html = document.documentElement;
-      if (isDark) {
-        html.classList.add('dark');
-      } else {
-        html.classList.remove('dark');
-      }
+      html.classList.remove('light', 'dark');
+      html.classList.add(effective);
     };
 
     mediaQuery.addEventListener('change', handleChange);

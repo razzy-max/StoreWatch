@@ -148,6 +148,46 @@ export async function deleteProduct(productId: string) {
   emitChange('products');
 }
 
+export async function savePackaging(input: {
+  product_id: string;
+  label: string;
+  units_per_package: number;
+  selling_price_per_package: number;
+}) {
+  const packaging: ProductPackagingRecord = {
+    id: crypto.randomUUID(),
+    product_id: input.product_id,
+    label: input.label,
+    units_per_package: input.units_per_package,
+    selling_price_per_package: input.selling_price_per_package,
+    is_default: false,
+    created_at: new Date().toISOString()
+  };
+
+  if (navigator.onLine) {
+    const { error } = await supabase.from('product_packaging').insert(packaging);
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  await db.product_packaging.put(packaging);
+  emitChange('packaging');
+  return packaging;
+}
+
+export async function deletePackaging(packagingId: string) {
+  if (navigator.onLine) {
+    const { error } = await supabase.from('product_packaging').delete().eq('id', packagingId);
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  await db.product_packaging.delete(packagingId);
+  emitChange('packaging');
+}
+
 export async function recordSale(input: {
   product: ProductRecord;
   packaging: ProductPackagingRecord;
