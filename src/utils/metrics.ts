@@ -35,9 +35,7 @@ export function estimateCogsFromCostTimeline(sales: SaleView[], updates: StockUp
 
   for (const update of updates) {
     const costPerPackage = Number(update.cost_price_per_package ?? update.cost_price_per_unit ?? 0);
-    const unitsPerPackage = Number(update.packaging_units_per_package ?? 1);
-    const cost = unitsPerPackage > 0 ? costPerPackage / unitsPerPackage : 0;
-    if (cost <= 0) {
+    if (costPerPackage <= 0) {
       continue;
     }
 
@@ -54,19 +52,28 @@ export function estimateCogsFromCostTimeline(sales: SaleView[], updates: StockUp
 
   for (const sale of sales) {
     const productUpdates = updatesByProduct.get(sale.product_id) ?? [];
-    let matchedCost = 0;
+    let matchedCostPerPackage = 0;
 
     for (let i = productUpdates.length - 1; i >= 0; i -= 1) {
-      if (productUpdates[i].timestamp <= sale.timestamp) {
-        const costPerPackage = Number(productUpdates[i].cost_price_per_package ?? productUpdates[i].cost_price_per_unit ?? 0);
-        const unitsPerPackage = Number(productUpdates[i].packaging_units_per_package ?? 1);
-        matchedCost = unitsPerPackage > 0 ? costPerPackage / unitsPerPackage : 0;
+      const update = productUpdates[i];
+      const matchesPackaging = !sale.packaging_id || update.packaging_id === sale.packaging_id;
+      if (matchesPackaging && update.timestamp <= sale.timestamp) {
+        matchedCostPerPackage = Number(update.cost_price_per_package ?? update.cost_price_per_unit ?? 0);
         break;
       }
     }
 
-    const qtyUnits = Number(sale.qty_base_units ?? sale.qty);
-    cogs += matchedCost * qtyUnits;
+    if (matchedCostPerPackage <= 0) {
+      for (let i = productUpdates.length - 1; i >= 0; i -= 1) {
+        if (productUpdates[i].timestamp <= sale.timestamp) {
+          matchedCostPerPackage = Number(productUpdates[i].cost_price_per_package ?? productUpdates[i].cost_price_per_unit ?? 0);
+          break;
+        }
+      }
+    }
+
+    const qtyPackages = Number(sale.qty);
+    cogs += matchedCostPerPackage * qtyPackages;
   }
 
   return cogs;

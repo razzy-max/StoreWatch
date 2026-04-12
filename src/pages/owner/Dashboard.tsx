@@ -67,7 +67,7 @@ export default function DashboardPage() {
       <Card className="bg-gradient-to-br from-slate-800 to-slate-900">
         <p className="text-sm text-slate-400">{owner ? greeting(owner.name) : 'Welcome back'}</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-50">Store overview</h2>
-        <p className="mt-2 text-sm text-slate-300">Live sales, stock receipts, and margin estimates for {rangeLabel.toLowerCase()}.</p>
+        <p className="mt-2 text-sm text-slate-300">Live sales, stock receipts, and estimated package-level margins for {rangeLabel.toLowerCase()}.</p>
         <div className="mt-3 grid grid-cols-3 gap-2">
           <Button variant={range === 'today' ? 'primary' : 'secondary'} onClick={() => setRange('today')}>
             Today
