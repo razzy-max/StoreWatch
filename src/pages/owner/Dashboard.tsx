@@ -12,7 +12,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { usePackagings } from '@/hooks/usePackagings';
 import { clearBusinessHistoryAndStock, friendlyError } from '@/lib/sync';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { formatShortTime } from '@/utils/formatDate';
+import { formatDateTime } from '@/utils/formatDate';
 import { formatStockDisplay, getLowStockThresholdUnits, getEffectiveStockUnits } from '@/utils/stockDisplay';
 import {
   calculateInventorySpend,
@@ -181,7 +181,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-slate-50">{sale.product_name ?? 'Product'}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Qty {sale.qty} {sale.packaging_label ?? 'unit'}(s) · {sale.employee_name ?? 'Employee'} · {formatShortTime(sale.timestamp)}
+                      Qty {sale.qty} {sale.packaging_label ?? 'unit'}(s) · {sale.employee_name ?? 'Employee'} · {formatDateTime(sale.timestamp)}
                     </p>
                   </div>
                   <p className="font-bold text-amberAccent">{formatCurrency(Number(sale.total))}</p>
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                     <div>
                       <p className="font-semibold text-slate-900 dark:text-slate-50">{update.product_name ?? 'Product'}</p>
                       <p className="text-sm text-slate-500 dark:text-slate-400">
-                        +{packages} {update.packaging_label ?? 'package'}(s) · {recordedByLabel} · {formatShortTime(update.timestamp)}
+                        +{packages} {update.packaging_label ?? 'package'}(s) · {recordedByLabel} · {formatDateTime(update.timestamp)}
                       </p>
                     </div>
                     <div className="text-right">
