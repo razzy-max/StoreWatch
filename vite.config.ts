@@ -7,6 +7,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: false
+      },
       includeAssets: ['pwa-192.svg', 'pwa-512.svg'],
       manifest: {
         name: 'StoreWatch',

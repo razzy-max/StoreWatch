@@ -257,6 +257,7 @@ export function useStockUpdates() {
         ...item,
         product_name: products.find((product: ProductRecord) => product.id === item.product_id)?.name,
         employee_name: (users as Array<{ id: string; name?: string }>).find((user) => user.id === item.recorded_by)?.name,
+        recorded_by_name: (users as Array<{ id: string; name?: string }>).find((user) => user.id === item.recorded_by)?.name,
         packaging_label: packaging.find((pkg) => pkg.id === item.packaging_id)?.label,
         packaging_units_per_package: packaging.find((pkg) => pkg.id === item.packaging_id)?.units_per_package
       }));
@@ -274,7 +275,7 @@ export function useStockUpdates() {
 
       const { data, error } = await supabase
         .from('stock_updates')
-        .select('*, product:products(name), employee:users(name), packaging:product_packaging(label, units_per_package)')
+        .select('*, product:products(name), employee:users(name,role), packaging:product_packaging(label, units_per_package)')
         .order('timestamp', { ascending: false })
         .limit(200);
 
@@ -295,6 +296,12 @@ export function useStockUpdates() {
         employee_name: Array.isArray((row as { employee?: Array<{ name?: string }> }).employee)
           ? (row as { employee?: Array<{ name?: string }> }).employee?.[0]?.name
           : (row as { employee?: { name?: string } }).employee?.name,
+        recorded_by_name: Array.isArray((row as { employee?: Array<{ name?: string }> }).employee)
+          ? (row as { employee?: Array<{ name?: string }> }).employee?.[0]?.name
+          : (row as { employee?: { name?: string } }).employee?.name,
+        recorded_by_role: Array.isArray((row as { employee?: Array<{ role?: 'owner' | 'employee' }> }).employee)
+          ? (row as { employee?: Array<{ role?: 'owner' | 'employee' }> }).employee?.[0]?.role
+          : (row as { employee?: { role?: 'owner' | 'employee' } }).employee?.role,
         packaging_label: Array.isArray((row as { packaging?: Array<{ label?: string }> }).packaging)
           ? (row as { packaging?: Array<{ label?: string }> }).packaging?.[0]?.label
           : (row as { packaging?: { label?: string } }).packaging?.label,

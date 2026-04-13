@@ -42,7 +42,7 @@ export function ProductPicker({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search products"
-          className="h-12 w-full rounded-xl border border-slate-700 bg-navy pl-10 pr-4 text-sm text-slate-50 outline-none placeholder:text-slate-500 focus:border-amberAccent"
+          className="h-12 w-full rounded-xl border border-slate-300 bg-slate-100 pl-10 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-amberAccent dark:border-slate-700 dark:bg-navy dark:text-slate-50"
         />
       </div>
 
@@ -67,25 +67,25 @@ export function ProductPicker({
               key={product.id}
               className={clsx(
                 'cursor-pointer border-2 transition active:scale-[0.99]',
-                selected ? 'border-amberAccent' : 'border-transparent'
+                  selected ? 'border-amberAccent' : 'border-slate-200 dark:border-transparent'
               )}
               onClick={() => onSelect(product)}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-50">{product.name}</h3>
-                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">{product.category}</p>
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{product.name}</h3>
+                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{product.category}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-amberAccent">{product.unit_price.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}</p>
-                  <p className="text-xs text-slate-400">Stock: {formatStockDisplay(product, packagings)}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Stock: {formatStockDisplay(product, packagings)}</p>
                 </div>
               </div>
             </Card>
           );
         })}
         {filteredProducts.length === 0 ? (
-          <Card className="text-center text-sm text-slate-400">No matching products found.</Card>
+          <Card className="text-center text-sm text-slate-500 dark:text-slate-400">No matching products found.</Card>
         ) : null}
       </div>
     </div>

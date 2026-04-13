@@ -21,7 +21,7 @@ const OwnerProductsPage = lazy(() => import('@/pages/owner/Products'));
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-navy px-4 py-6 text-slate-50">
+    <div className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900 dark:bg-navy dark:text-slate-50">
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         <SkeletonLoader className="h-24 w-full" />
         <SkeletonLoader className="h-48 w-full" />
@@ -82,9 +82,9 @@ function OwnerLayout() {
   const { offline } = useSync();
 
   return (
-    <div className="min-h-screen bg-navy px-4 pb-28 pt-3 text-slate-50">
+    <div className="min-h-screen bg-slate-100 px-4 pb-28 pt-3 text-slate-900 transition-colors dark:bg-navy dark:text-slate-50">
       <OfflineBanner offline={offline} />
-      <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <div className="mx-auto flex max-w-2xl animate-fade-in flex-col gap-4">
         <AppHeader title="StoreWatch" subtitle={owner ? `Owner view · ${owner.name}` : 'Owner view'} onLogout={signOut} />
         <Outlet />
       </div>
@@ -105,9 +105,9 @@ function EmployeeLayout() {
   const { offline } = useSync();
 
   return (
-    <div className="min-h-screen bg-navy px-4 pb-28 pt-3 text-slate-50">
+    <div className="min-h-screen bg-slate-100 px-4 pb-28 pt-3 text-slate-900 transition-colors dark:bg-navy dark:text-slate-50">
       <OfflineBanner offline={offline} />
-      <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <div className="mx-auto flex max-w-2xl animate-fade-in flex-col gap-4">
         <AppHeader title="StoreWatch" subtitle={employee ? `Employee view · ${employee.name}` : 'Employee view'} onLogout={signOut} />
         <Outlet />
       </div>

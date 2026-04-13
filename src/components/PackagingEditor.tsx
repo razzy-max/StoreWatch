@@ -32,17 +32,17 @@ export function PackagingEditor({ packagings, onAdd, onRemove }: PackagingEditor
   };
 
   return (
-    <div className="space-y-3 border-t border-slate-700 pt-3 dark:border-slate-700">
+    <div className="space-y-3 border-t border-slate-200 pt-3 dark:border-slate-700">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-slate-300 dark:text-slate-300">Pricing Tiers</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Pricing Tiers</label>
       </div>
 
       <div className="space-y-2">
         {packagings.map((pkg) => (
-          <div key={pkg.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <div key={pkg.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-800/50">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-slate-50 dark:text-slate-50">{pkg.label}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-400">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{pkg.label}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {pkg.units_per_package} units @ ${Number(pkg.selling_price_per_package).toFixed(2)}
               </p>
             </div>
@@ -59,14 +59,14 @@ export function PackagingEditor({ packagings, onAdd, onRemove }: PackagingEditor
       </div>
 
       {isAdding ? (
-        <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+        <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-800/50">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-300 dark:text-slate-300">Label (e.g., Single, Crate, Case)</label>
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Label (e.g., Single, Crate, Case)</label>
             <input
               type="text"
               value={newPackaging.label}
               onChange={(e) => setNewPackaging({ ...newPackaging, label: e.target.value })}
-              className="h-10 w-full rounded-lg border border-slate-700 bg-navy px-3 text-slate-50 outline-none focus:border-amberAccent dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none focus:border-amberAccent dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
               placeholder="e.g., Single, Crate"
               autoFocus
             />
@@ -74,25 +74,25 @@ export function PackagingEditor({ packagings, onAdd, onRemove }: PackagingEditor
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300 dark:text-slate-300">Units Per Package</label>
+              <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Units Per Package</label>
               <input
                 type="number"
                 min="1"
                 value={newPackaging.units_per_package}
                 onChange={(e) => setNewPackaging({ ...newPackaging, units_per_package: e.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-700 bg-navy px-3 text-slate-50 outline-none focus:border-amberAccent dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none focus:border-amberAccent dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                 placeholder="1"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-300 dark:text-slate-300">Price</label>
+              <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Price</label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 value={newPackaging.selling_price_per_package}
                 onChange={(e) => setNewPackaging({ ...newPackaging, selling_price_per_package: e.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-700 bg-navy px-3 text-slate-50 outline-none focus:border-amberAccent dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none focus:border-amberAccent dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                 placeholder="0.00"
               />
             </div>

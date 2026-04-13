@@ -1,4 +1,4 @@
-import { CheckCircle2, Store, ShieldCheck, User2 } from 'lucide-react';
+import { CheckCircle2, Store, ShieldCheck, User2, Moon, Sun } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
@@ -6,6 +6,7 @@ import { Card } from '@/components/Card';
 import { useAuth, getFriendlyAuthError } from '@/hooks/useAuth';
 import { useToast } from '@/components/ToastProvider';
 import { friendlyError } from '@/lib/sync';
+import { useTheme } from '@/context/ThemeContext';
 
 const pinKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'];
 
@@ -60,26 +61,26 @@ function OwnerForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <form className="space-y-3" onSubmit={handleSubmit}>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-300">Email</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
         <input
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           type="email"
-          className={`h-12 w-full rounded-xl border bg-navy px-4 text-slate-50 outline-none placeholder:text-slate-500 focus:border-amberAccent ${
-            errors.email ? 'border-red-500' : 'border-slate-700'
+          className={`h-12 w-full rounded-xl border bg-slate-100 px-4 text-slate-900 outline-none placeholder:text-slate-500 focus:border-amberAccent dark:bg-navy dark:text-slate-50 ${
+            errors.email ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'
           }`}
           placeholder="owner@storewatch.ng"
         />
         {errors.email ? <p className="mt-1 text-xs text-red-400">{errors.email}</p> : null}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-300">Password</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
         <input
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           type="password"
-          className={`h-12 w-full rounded-xl border bg-navy px-4 text-slate-50 outline-none placeholder:text-slate-500 focus:border-amberAccent ${
-            errors.password ? 'border-red-500' : 'border-slate-700'
+          className={`h-12 w-full rounded-xl border bg-slate-100 px-4 text-slate-900 outline-none placeholder:text-slate-500 focus:border-amberAccent dark:bg-navy dark:text-slate-50 ${
+            errors.password ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'
           }`}
           placeholder="Enter password"
         />
@@ -148,7 +149,7 @@ function EmployeePad({ onSuccess }: { onSuccess: () => void }) {
               key={key}
               type="button"
               variant={isControl ? 'secondary' : 'ghost'}
-              className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-700 text-lg"
+              className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-300 text-lg dark:border-slate-700"
               onClick={() => {
                 if (key === 'clear') {
                   setPin('');
@@ -175,20 +176,35 @@ function EmployeePad({ onSuccess }: { onSuccess: () => void }) {
 
 export default function Login() {
   const [mode, setMode] = useState<'owner' | 'employee' | null>(null);
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-navy px-4 py-6 text-slate-50">
+    <div className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900 dark:bg-navy dark:text-slate-50">
       <div className="mx-auto flex max-w-md flex-col gap-4">
-        <div className="pt-4 text-center">
+        <div className="flex items-start justify-end">
+          <Button
+            variant="secondary"
+            className="min-h-12 min-w-12 rounded-full border border-slate-300 bg-white p-3 text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span className="relative block h-5 w-5">
+              <Sun className={`absolute inset-0 h-5 w-5 transition-all duration-200 ${theme === 'dark' ? 'rotate-0 opacity-100' : '-rotate-45 opacity-0'}`} />
+              <Moon className={`absolute inset-0 h-5 w-5 transition-all duration-200 ${theme === 'light' ? 'rotate-0 opacity-100' : 'rotate-45 opacity-0'}`} />
+            </span>
+          </Button>
+        </div>
+
+        <div className="text-center">
           <LogoMark />
           <h1 className="mt-4 text-3xl font-bold tracking-tight">StoreWatch</h1>
-          <p className="mt-2 text-sm text-slate-400">Mobile-first retail operations for drinks and wine inventory.</p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Mobile-first retail operations for drinks and wine inventory.</p>
         </div>
 
         <Card className="space-y-3">
           <button
             type="button"
-            className={`w-full rounded-2xl border p-4 text-left transition ${mode === 'owner' ? 'border-amberAccent bg-slate-800/60' : 'border-slate-700 bg-slate-900/20'}`}
+            className={`w-full rounded-2xl border p-4 text-left transition ${mode === 'owner' ? 'border-amberAccent bg-amberAccent/10' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/20'}`}
             onClick={() => setMode(mode === 'owner' ? null : 'owner')}
           >
             <div className="flex items-center gap-3">
@@ -197,7 +213,7 @@ export default function Login() {
               </div>
               <div>
                 <p className="text-base font-semibold">I'm the Owner</p>
-                <p className="text-sm text-slate-400">Sign in with Supabase Auth.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Sign in with Supabase Auth.</p>
               </div>
             </div>
           </button>
@@ -211,16 +227,16 @@ export default function Login() {
         <Card className="space-y-3">
           <button
             type="button"
-            className={`w-full rounded-2xl border p-4 text-left transition ${mode === 'employee' ? 'border-amberAccent bg-slate-800/60' : 'border-slate-700 bg-slate-900/20'}`}
+            className={`w-full rounded-2xl border p-4 text-left transition ${mode === 'employee' ? 'border-amberAccent bg-amberAccent/10' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/20'}`}
             onClick={() => setMode(mode === 'employee' ? null : 'employee')}
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-700 text-slate-50">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-50">
                 <User2 className="h-6 w-6" />
               </div>
               <div>
                 <p className="text-base font-semibold">I'm an Employee</p>
-                <p className="text-sm text-slate-400">Use your 4-digit PIN.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Use your 4-digit PIN.</p>
               </div>
             </div>
           </button>
@@ -231,9 +247,9 @@ export default function Login() {
           </div>
         </Card>
 
-        <Card className="flex items-center gap-3 border border-slate-700 bg-slate-900/40">
+        <Card className="flex items-center gap-3 border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40">
           <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-          <p className="text-sm text-slate-300">Offline caching and background sync are enabled after first connection.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Offline caching and background sync are enabled after first connection.</p>
         </Card>
       </div>
     </div>

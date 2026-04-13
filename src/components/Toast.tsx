@@ -32,9 +32,9 @@ export function Toast({ toast, onDismiss }: ToastProps) {
   }
 
   const toneClasses = {
-    success: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-50',
-    error: 'border-red-500/40 bg-red-500/15 text-red-50',
-    warning: 'border-amber-500/40 bg-amber-500/15 text-amber-50'
+    success: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100',
+    error: 'border-red-500/40 bg-red-500/15 text-red-900 dark:text-red-100',
+    warning: 'border-amber-500/40 bg-amber-500/15 text-amber-900 dark:text-amber-100'
   }[toast.tone];
 
   const icon = {
@@ -44,7 +44,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
   }[toast.tone];
 
   return (
-    <div className="fixed left-1/2 top-4 z-[70] w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 animate-slide-in-down rounded-2xl border bg-slate-900/95 p-4 shadow-soft backdrop-blur">
+    <div className="fixed left-1/2 top-4 z-[70] w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 animate-slide-in-down rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-soft backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
       <div className={clsx('flex items-start gap-3 rounded-xl border p-3', toneClasses)}>
         {icon}
         <div className="min-w-0 flex-1">

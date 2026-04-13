@@ -5,6 +5,7 @@ import type { EmployeeSession, OwnerSession, UserRecord } from '@/types/models';
 import { friendlyError } from '@/lib/sync';
 
 const EMPLOYEE_STORAGE_KEY = 'storewatch.employee';
+const OWNER_STORAGE_KEY = 'storewatch.owner';
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
 
 interface AuthContextValue {
@@ -27,32 +28,59 @@ function readEmployeeSession(): EmployeeSession | null {
   }
 }
 
-async function loadOwnerSession(): Promise<OwnerSession | null> {
+function readOwnerSession(): OwnerSession | null {
+  try {
+    const raw = window.localStorage.getItem(OWNER_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as OwnerSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeOwnerSession(session: OwnerSession | null) {
+  if (session) {
+    window.localStorage.setItem(OWNER_STORAGE_KEY, JSON.stringify(session));
+  } else {
+    window.localStorage.removeItem(OWNER_STORAGE_KEY);
+  }
+}
+
+async function loadOwnerSessionFromSupabase(): Promise<OwnerSession | null> {
   const timeout = new Promise<null>((resolve) => {
     window.setTimeout(() => resolve(null), AUTH_BOOTSTRAP_TIMEOUT_MS);
   });
 
-  const sessionResult = await Promise.race([
+  const session = await Promise.race([
     supabase.auth.getSession().then((result) => result.data.session),
     timeout
   ]);
 
-  const session = sessionResult;
   if (!session?.user) {
-    return null;
+    return readOwnerSession();
+  }
+
+  return loadOwnerSessionFromSession(session);
+}
+
+async function loadOwnerSessionFromSession(session: { user?: { id: string } } | null): Promise<OwnerSession | null> {
+  if (!session?.user) {
+    return readOwnerSession();
   }
 
   const { data: profile, error } = await supabase.from('users').select('id,name,role').eq('id', session.user.id).maybeSingle();
   const user = profile as UserRecord | null;
   if (error || !user || user.role !== 'owner') {
-    return null;
+    return readOwnerSession();
   }
 
-  return {
+  const ownerSession: OwnerSession = {
     id: user.id,
     name: user.name,
     role: 'owner'
   };
+
+  writeOwnerSession(ownerSession);
+  return ownerSession;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -65,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function bootstrap() {
       try {
-        const [ownerSession, employeeSession] = await Promise.all([loadOwnerSession(), Promise.resolve(readEmployeeSession())]);
+        const [ownerSession, employeeSession] = await Promise.all([loadOwnerSessionFromSupabase(), Promise.resolve(readEmployeeSession())]);
         if (!mounted) {
           return;
         }
@@ -88,16 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     bootstrap();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async () => {
-      const nextOwner = await loadOwnerSession();
-      if (mounted) {
-        setOwner(nextOwner);
-      }
-    });
-
     return () => {
       mounted = false;
-      subscription.subscription.unsubscribe();
     };
   }, []);
 
@@ -112,14 +132,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error(error?.message || 'Unable to sign in.');
         }
 
-        const { data: profile, error: profileError } = await supabase.from('users').select('id,name,role').eq('id', data.session.user.id).maybeSingle();
-        const user = profile as UserRecord | null;
-        if (profileError || !user || user.role !== 'owner') {
+        const ownerSession = await loadOwnerSessionFromSession(data.session);
+        if (!ownerSession) {
           await supabase.auth.signOut();
           throw new Error('This account is not registered as an owner.');
         }
 
-        setOwner({ id: user.id, name: user.name, role: 'owner' });
+        setOwner(ownerSession);
       },
       signInEmployee: async (pin: string) => {
         const { data, error } = await supabase.from('users').select('*').eq('role', 'employee');
@@ -139,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signOut: async () => {
         window.localStorage.removeItem(EMPLOYEE_STORAGE_KEY);
+        writeOwnerSession(null);
         setOwner(null);
         setEmployee(null);
 

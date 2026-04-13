@@ -14,12 +14,13 @@ interface ProductFormProps {
   errors: Partial<Record<keyof ProductFormValues, string>>;
   onChange: (values: ProductFormValues) => void;
   categories?: ProductCategory[];
+  showInitialStock?: boolean;
 }
 
 const suggestedCategories: ProductCategory[] = ['Beer', 'Wine', 'Spirits', 'Soft Drinks', 'Water', 'Other'];
 const ADD_NEW_CATEGORY_VALUE = '__add_new_category__';
 
-export function ProductForm({ values, errors, onChange, categories = [] }: ProductFormProps) {
+export function ProductForm({ values, errors, onChange, categories = [], showInitialStock = true }: ProductFormProps) {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
   const customCategoryRef = useRef<HTMLInputElement>(null);
@@ -56,17 +57,17 @@ export function ProductForm({ values, errors, onChange, categories = [] }: Produ
   return (
     <div className="space-y-3">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-300">Name</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
         <input
           value={values.name}
           onChange={(event) => onChange({ ...values, name: event.target.value })}
-          className={`h-12 w-full rounded-xl border bg-navy px-4 text-slate-50 outline-none focus:border-amberAccent ${errors.name ? 'border-red-500' : 'border-slate-700'}`}
+          className={`h-12 w-full rounded-xl border bg-slate-100 px-4 text-slate-900 outline-none focus:border-amberAccent dark:bg-navy dark:text-slate-50 ${errors.name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
           placeholder="Product name"
         />
         {errors.name ? <p className="mt-1 text-xs text-red-400">{errors.name}</p> : null}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-300">Category</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
         <select
           value={selectedCategoryValue}
           onChange={(event) => {
@@ -82,7 +83,7 @@ export function ProductForm({ values, errors, onChange, categories = [] }: Produ
             setCustomCategory('');
             onChange({ ...values, category: nextCategory });
           }}
-          className={`h-12 w-full rounded-xl border bg-navy px-4 text-slate-50 outline-none focus:border-amberAccent ${errors.category ? 'border-red-500' : 'border-slate-700'}`}
+          className={`h-12 w-full rounded-xl border bg-slate-100 px-4 text-slate-900 outline-none focus:border-amberAccent dark:bg-navy dark:text-slate-50 ${errors.category ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
         >
           <option value="">Select category</option>
           {categoryOptions.map((category) => (
@@ -102,43 +103,45 @@ export function ProductForm({ values, errors, onChange, categories = [] }: Produ
               onChange({ ...values, category: nextValue });
             }}
             placeholder="Type new category"
-            className="mt-2 h-12 w-full rounded-xl border border-slate-700 bg-navy px-4 text-slate-50 outline-none focus:border-amberAccent"
+            className="mt-2 h-12 w-full rounded-xl border border-slate-300 bg-slate-100 px-4 text-slate-900 outline-none focus:border-amberAccent dark:border-slate-700 dark:bg-navy dark:text-slate-50"
           />
         ) : null}
         {errors.category ? <p className="mt-1 text-xs text-red-400">{errors.category}</p> : null}
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Unit Price</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Unit Price</label>
           <input
             type="number"
             min="0"
             step="0.01"
             value={values.unit_price}
             onChange={(event) => onChange({ ...values, unit_price: event.target.value })}
-            className={`h-12 w-full rounded-xl border bg-navy px-4 text-slate-50 outline-none focus:border-amberAccent ${errors.unit_price ? 'border-red-500' : 'border-slate-700'}`}
+            className={`h-12 w-full rounded-xl border bg-slate-100 px-4 text-slate-900 outline-none focus:border-amberAccent dark:bg-navy dark:text-slate-50 ${errors.unit_price ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
           />
           {errors.unit_price ? <p className="mt-1 text-xs text-red-400">{errors.unit_price}</p> : null}
         </div>
+        {showInitialStock ? (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Initial Stock</label>
+            <input
+              type="number"
+              min="0"
+              value={values.stock_qty}
+              onChange={(event) => onChange({ ...values, stock_qty: event.target.value })}
+              className={`h-12 w-full rounded-xl border bg-slate-100 px-4 text-slate-900 outline-none focus:border-amberAccent dark:bg-navy dark:text-slate-50 ${errors.stock_qty ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
+            />
+            {errors.stock_qty ? <p className="mt-1 text-xs text-red-400">{errors.stock_qty}</p> : null}
+          </div>
+        ) : null}
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Initial Stock</label>
-          <input
-            type="number"
-            min="0"
-            value={values.stock_qty}
-            onChange={(event) => onChange({ ...values, stock_qty: event.target.value })}
-            className={`h-12 w-full rounded-xl border bg-navy px-4 text-slate-50 outline-none focus:border-amberAccent ${errors.stock_qty ? 'border-red-500' : 'border-slate-700'}`}
-          />
-          {errors.stock_qty ? <p className="mt-1 text-xs text-red-400">{errors.stock_qty}</p> : null}
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Low Stock Threshold</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Low Stock Threshold</label>
           <input
             type="number"
             min="0"
             value={values.low_stock_threshold}
             onChange={(event) => onChange({ ...values, low_stock_threshold: event.target.value })}
-            className={`h-12 w-full rounded-xl border bg-navy px-4 text-slate-50 outline-none focus:border-amberAccent ${errors.low_stock_threshold ? 'border-red-500' : 'border-slate-700'}`}
+            className={`h-12 w-full rounded-xl border bg-slate-100 px-4 text-slate-900 outline-none focus:border-amberAccent dark:bg-navy dark:text-slate-50 ${errors.low_stock_threshold ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
           />
           {errors.low_stock_threshold ? <p className="mt-1 text-xs text-red-400">{errors.low_stock_threshold}</p> : null}
         </div>

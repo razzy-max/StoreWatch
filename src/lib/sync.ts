@@ -137,14 +137,39 @@ export async function saveProduct(input: SaveProductInput) {
 }
 
 export async function deleteProduct(productId: string) {
+  async function deleteRemoteByProduct(table: string) {
+    const { error } = await supabase.from(table).delete().eq('product_id', productId);
+    if (!error) {
+      return;
+    }
+
+    // Older deployments may not yet have every related table.
+    if (error.code === '42P01') {
+      return;
+    }
+
+    throw new Error(error.message);
+  }
+
   if (navigator.onLine) {
+    await deleteRemoteByProduct('inventory_movements');
+    await deleteRemoteByProduct('sales');
+    await deleteRemoteByProduct('stock_updates');
+    await deleteRemoteByProduct('product_packaging');
+
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (error) {
       throw new Error(error.message);
     }
   }
 
+  await db.stock_updates.where('product_id').equals(productId).delete();
+  await db.sales.where('product_id').equals(productId).delete();
+  await db.product_packaging.where('product_id').equals(productId).delete();
   await db.products.delete(productId);
+  emitChange('stock_updates');
+  emitChange('sales');
+  emitChange('packaging');
   emitChange('products');
 }
 
@@ -289,8 +314,7 @@ export async function recordStockUpdate(input: {
       synced: true,
       packaging_id: stockUpdate.packaging_id,
       qty_base_units: stockUpdate.qty_base_units,
-      cost_price_per_unit: stockUpdate.cost_price_per_unit,
-      cost_price_per_package: stockUpdate.cost_price_per_package
+      cost_price_per_unit: stockUpdate.cost_price_per_unit
     });
 
     if (stockError) {
@@ -395,8 +419,7 @@ export async function syncPendingRecords() {
       synced: true,
       packaging_id: stockUpdate.packaging_id,
       qty_base_units: stockUpdate.qty_base_units,
-      cost_price_per_unit: stockUpdate.cost_price_per_unit ?? null,
-      cost_price_per_package: stockUpdate.cost_price_per_package ?? null
+      cost_price_per_unit: stockUpdate.cost_price_per_unit ?? null
     });
 
     if (stockError) {

@@ -2,5 +2,5 @@ import clsx from 'clsx';
 import type { HTMLAttributes } from 'react';
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={clsx('rounded-2xl bg-slatePanel p-4 shadow-soft', className)} {...props} />;
+  return <div className={clsx('rounded-2xl border border-slate-200 bg-white p-4 shadow-soft dark:border-slate-700 dark:bg-slatePanel', className)} {...props} />;
 }

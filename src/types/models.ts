@@ -79,6 +79,8 @@ export interface SaleView extends SaleRecord {
 export interface StockUpdateView extends StockUpdateRecord {
   product_name?: string;
   employee_name?: string;
+  recorded_by_name?: string;
+  recorded_by_role?: UserRole;
   packaging_label?: string;
   packaging_units_per_package?: number;
 }
