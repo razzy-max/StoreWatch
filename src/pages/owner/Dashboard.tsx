@@ -4,10 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/Button';
+import { Modal } from '@/components/Modal';
+import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { useOwnerRecentSales, useSalesHistory, useStockUpdates } from '@/hooks/useSales';
 import { useProducts } from '@/hooks/useProducts';
 import { usePackagings } from '@/hooks/usePackagings';
+import { clearBusinessHistoryAndStock, friendlyError } from '@/lib/sync';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { formatShortTime } from '@/utils/formatDate';
 import { formatStockDisplay, getLowStockThresholdUnits, getEffectiveStockUnits } from '@/utils/stockDisplay';
@@ -24,6 +27,8 @@ function greeting(name: string) {
   const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   return `${part}, ${name}`;
 }
+
+const RESET_CONFIRMATION_PHRASE = 'delete all sales and stocking history';
 
 function SummaryCard({ title, value, accent = false, info }: { title: string; value: string; accent?: boolean; info?: string }) {
   return (
@@ -43,10 +48,14 @@ function SummaryCard({ title, value, accent = false, info }: { title: string; va
 
 export default function DashboardPage() {
   const { owner } = useAuth();
+  const { success, error: pushError } = useToast();
   const navigate = useNavigate();
   const { products } = useProducts();
   const { packagings } = usePackagings();
   const [range, setRange] = useState<MetricRange>('today');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetInput, setResetInput] = useState('');
+  const [resetting, setResetting] = useState(false);
   const { startDate, endDate } = getRangeDates(range);
   const { sales: periodSales } = useSalesHistory(startDate, endDate);
   const { sales: recentSales } = useOwnerRecentSales();
@@ -68,6 +77,25 @@ export default function DashboardPage() {
   const estimatedGrossProfit = revenue - estimatedCogs;
   const estimatedMargin = revenue > 0 ? (estimatedGrossProfit / revenue) * 100 : 0;
   const rangeLabel = range === 'today' ? 'Today' : range === '7d' ? 'Last 7 Days' : 'Last 30 Days';
+  const resetPhraseMatches = resetInput.trim().toLowerCase() === RESET_CONFIRMATION_PHRASE;
+
+  async function handleConfirmReset() {
+    if (!resetPhraseMatches || resetting) {
+      return;
+    }
+
+    setResetting(true);
+    try {
+      await clearBusinessHistoryAndStock();
+      success('History cleared', 'Sales, stocking records, and current stock quantities were reset.');
+      setShowResetModal(false);
+      setResetInput('');
+    } catch (error) {
+      pushError('Reset failed', friendlyError(error, 'Unable to reset history right now.'));
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <div className="space-y-4 pb-6">
@@ -204,6 +232,64 @@ export default function DashboardPage() {
           </div>
         )}
       </Card>
+
+      <Card className="space-y-3 border border-red-200 bg-red-50/60 dark:border-red-500/30 dark:bg-red-500/10">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Reset Sales And Stock History</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Use this only when handing over a fresh store setup. Product catalog and packaging remain.</p>
+          </div>
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+        </div>
+        <Button variant="danger" onClick={() => setShowResetModal(true)}>
+          Clear Sales, Stocking, And Quantities
+        </Button>
+      </Card>
+
+      <Modal
+        open={showResetModal}
+        title="Confirm History Reset"
+        onClose={() => {
+          if (resetting) {
+            return;
+          }
+          setShowResetModal(false);
+          setResetInput('');
+        }}
+        footer={
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={resetting}
+              onClick={() => {
+                setShowResetModal(false);
+                setResetInput('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="danger" fullWidth disabled={!resetPhraseMatches || resetting} onClick={handleConfirmReset}>
+              {resetting ? 'Clearing...' : 'Confirm Clear'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-700 dark:text-slate-300">
+            This action permanently deletes all sales and stock receipt history and resets all product stock quantities to zero.
+          </p>
+          <p className="text-sm text-slate-700 dark:text-slate-300">
+            To continue, type: <span className="font-semibold text-red-600 dark:text-red-300">{RESET_CONFIRMATION_PHRASE}</span>
+          </p>
+          <input
+            value={resetInput}
+            onChange={(event) => setResetInput(event.target.value)}
+            placeholder={RESET_CONFIRMATION_PHRASE}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-slate-100 px-4 text-slate-900 outline-none focus:border-red-400 dark:border-slate-700 dark:bg-navy dark:text-slate-50"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -448,3 +448,68 @@ export async function syncPendingRecords() {
   await refreshPackagingFromSupabase();
   emitChange('sync');
 }
+
+export async function clearBusinessHistoryAndStock() {
+  if (!navigator.onLine) {
+    throw new Error('Go online to clear history and reset stock.');
+  }
+
+  async function deleteRemoteTable(table: string) {
+    const { error } = await supabase.from(table).delete().not('id', 'is', null);
+    if (!error) {
+      return;
+    }
+
+    // Some deployments may not include every optional table yet.
+    if (error.code === '42P01') {
+      return;
+    }
+
+    throw new Error(error.message);
+  }
+
+  await deleteRemoteTable('inventory_movements');
+  await deleteRemoteTable('sales');
+  await deleteRemoteTable('stock_updates');
+
+  const { data: remoteProducts, error: productFetchError } = await supabase
+    .from('products')
+    .select('id, low_stock_threshold, low_stock_threshold_base_units');
+
+  if (productFetchError) {
+    throw new Error(productFetchError.message);
+  }
+
+  for (const remoteProduct of remoteProducts ?? []) {
+    const { error: productUpdateError } = await supabase
+      .from('products')
+      .update({
+        stock_qty: 0,
+        stock_base_units: 0,
+        low_stock_threshold_base_units: remoteProduct.low_stock_threshold_base_units ?? remoteProduct.low_stock_threshold ?? 0
+      })
+      .eq('id', remoteProduct.id);
+
+    if (productUpdateError) {
+      throw new Error(productUpdateError.message);
+    }
+  }
+
+  await db.sales.clear();
+  await db.stock_updates.clear();
+
+  const localProducts = await db.products.toArray();
+  await Promise.all(
+    localProducts.map((product) =>
+      db.products.update(product.id, {
+        stock_qty: 0,
+        stock_base_units: 0,
+        low_stock_threshold_base_units: product.low_stock_threshold_base_units ?? product.low_stock_threshold
+      })
+    )
+  );
+
+  emitChange('sales');
+  emitChange('stock_updates');
+  emitChange('products');
+}
