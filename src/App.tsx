@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSync } from '@/hooks/useSync';
 
 const LoginPage = lazy(() => import('@/pages/auth/Login'));
+const InstallPage = lazy(() => import('@/pages/Install'));
 const EmployeeSalePage = lazy(() => import('@/pages/employee/Sale'));
 const EmployeeStockPage = lazy(() => import('@/pages/employee/Stock'));
 const EmployeeLogPage = lazy(() => import('@/pages/employee/Log'));
@@ -126,6 +127,7 @@ export default function App() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
+        <Route path="/install" element={<InstallPage />} />
         <Route element={<PublicGate />}>
           <Route path="/" element={<LoginPage />} />
         </Route>
