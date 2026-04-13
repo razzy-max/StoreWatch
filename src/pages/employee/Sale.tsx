@@ -1,5 +1,5 @@
 import { CheckCircle2, Plus, Minus, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
@@ -73,6 +73,9 @@ export default function SalePage() {
   const [submitting, setSubmitting] = useState(false);
   const [completedItems, setCompletedItems] = useState(0);
   const [manualError, setManualError] = useState('');
+  const [focusCartCue, setFocusCartCue] = useState(false);
+  const saleComposerRef = useRef<HTMLDivElement | null>(null);
+  const cartCueTimerRef = useRef<number | null>(null);
 
   const activeProduct = useMemo(() => products.find((product) => product.id === selectedProduct?.id) ?? null, [products, selectedProduct?.id]);
   const productPackagings = useMemo(
@@ -102,6 +105,18 @@ export default function SalePage() {
   }, [cartItems, products, packagings]);
 
   const cartTotal = useMemo(() => cartSummary.reduce((sum, item) => sum + item.lineTotal, 0), [cartSummary]);
+
+  function scrollToSaleComposer() {
+    saleComposerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function flashCartCue() {
+    setFocusCartCue(true);
+    if (cartCueTimerRef.current) {
+      window.clearTimeout(cartCueTimerRef.current);
+    }
+    cartCueTimerRef.current = window.setTimeout(() => setFocusCartCue(false), 900);
+  }
 
   function reservedUnitsForProduct(productId: string) {
     return cartSummary
@@ -179,6 +194,15 @@ export default function SalePage() {
 
     setSelectedPackaging(defaultPackaging);
   }, [activeProduct, productPackagings]);
+
+  useEffect(
+    () => () => {
+      if (cartCueTimerRef.current) {
+        window.clearTimeout(cartCueTimerRef.current);
+      }
+    },
+    []
+  );
 
   async function handleRecordSale() {
     if (!employee) {
@@ -260,10 +284,13 @@ export default function SalePage() {
         onSelect={(product) => {
           setSelectedProduct(product);
           setManualError('');
+          requestAnimationFrame(scrollToSaleComposer);
+          flashCartCue();
         }}
       />
 
-      <Card className="space-y-4">
+      <div ref={saleComposerRef}>
+        <Card className={`space-y-4 transition-all duration-300 ${focusCartCue ? 'ring-2 ring-amberAccent/60 animate-pulse' : ''}`}>
         <div>
           <p className="text-sm text-slate-500 dark:text-slate-400">Selected product</p>
           {activeProduct ? (
@@ -349,7 +376,8 @@ export default function SalePage() {
         <Button fullWidth disabled={submitting || cartSummary.length === 0} onClick={handleRecordSale}>
           {submitting ? 'Recording...' : `Record Sale (${cartSummary.length})`}
         </Button>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
