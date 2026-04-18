@@ -26,9 +26,9 @@ export function ProductForm({ values, errors, onChange, categories = [], showIni
   const customCategoryRef = useRef<HTMLInputElement>(null);
 
   const categoryOptions = useMemo(() => {
-    const combined = [...suggestedCategories, ...categories, values.category];
+    const combined = [...suggestedCategories, ...categories];
     return Array.from(new Set(combined.map((item) => item.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-  }, [categories, values.category]);
+  }, [categories]);
 
   useEffect(() => {
     const categoryValue = values.category.trim();
@@ -43,7 +43,7 @@ export function ProductForm({ values, errors, onChange, categories = [], showIni
     }
 
     setIsAddingCategory(true);
-    setCustomCategory(categoryValue);
+    setCustomCategory((current) => (current === categoryValue ? current : categoryValue));
   }, [categoryOptions, values.category]);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function ProductForm({ values, errors, onChange, categories = [], showIni
     }
   }, [isAddingCategory]);
 
-  const selectedCategoryValue = isAddingCategory ? ADD_NEW_CATEGORY_VALUE : values.category;
+  const selectedCategoryValue = isAddingCategory || (values.category.trim() && !categoryOptions.includes(values.category.trim())) ? ADD_NEW_CATEGORY_VALUE : values.category;
 
   return (
     <div className="space-y-3">
