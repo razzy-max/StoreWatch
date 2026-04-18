@@ -74,6 +74,7 @@ export default function ProductsPage() {
     if (!current.name.trim()) nextErrors.name = 'Name is required.';
     if (!current.category) nextErrors.category = 'Category is required.';
     if (Number(current.unit_price) < 0 || current.unit_price === '') nextErrors.unit_price = 'Enter a valid price.';
+    if (Number(current.stock_qty) < 0 || current.stock_qty === '') nextErrors.stock_qty = 'Enter a valid stock quantity.';
     if (Number(current.low_stock_threshold) < 0 || current.low_stock_threshold === '') nextErrors.low_stock_threshold = 'Enter a valid threshold.';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -110,7 +111,7 @@ export default function ProductsPage() {
         name: draft.name.trim(),
         category: draft.category,
         unit_price: Number(draft.unit_price),
-        stock_qty: latestTargetProduct ? Number(latestTargetProduct.stock_qty) : 0,
+        stock_qty: latestTargetProduct ? Number(draft.stock_qty) : 0,
         low_stock_threshold: Number(draft.low_stock_threshold)
       });
       success('Saved', latestTargetProduct ? 'Product updated successfully.' : 'Product created successfully.');
@@ -351,10 +352,10 @@ export default function ProductsPage() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-900/30">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">1. Product details</p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Start with the name, category, and low stock threshold.</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Start with the name, category, threshold, and set exact stock while editing.</p>
           </div>
 
-          <ProductForm values={draft} errors={errors} onChange={setDraft} categories={availableCategories} showInitialStock={false} />
+          <ProductForm values={draft} errors={errors} onChange={setDraft} categories={availableCategories} showInitialStock={Boolean(editingProduct)} />
 
           <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-900/30">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">2. Pricing tiers</p>
@@ -377,7 +378,7 @@ export default function ProductsPage() {
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-900/30">
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">3. Opening stock</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Record the first stock receipt right after the tiers are ready.</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Record stock receipts here. This section adds to current stock.</p>
               </div>
 
               <div>
