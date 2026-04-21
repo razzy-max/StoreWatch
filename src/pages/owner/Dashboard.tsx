@@ -75,10 +75,24 @@ export default function DashboardPage() {
     return products.reduce((sum, product) => {
       const productPackagings = packagings
         .filter((packaging) => packaging.product_id === product.id)
-        .sort((a, b) => Number(a.units_per_package) - Number(b.units_per_package));
+        .filter((packaging) => Number(packaging.units_per_package) > 0)
+        .sort((a, b) => {
+          const unitDiff = Number(a.units_per_package) - Number(b.units_per_package);
+          if (unitDiff !== 0) {
+            return unitDiff;
+          }
+
+          const aCreated = a.created_at ? Date.parse(a.created_at) : Number.POSITIVE_INFINITY;
+          const bCreated = b.created_at ? Date.parse(b.created_at) : Number.POSITIVE_INFINITY;
+          if (aCreated !== bCreated) {
+            return aCreated - bCreated;
+          }
+
+          return a.id.localeCompare(b.id);
+        });
 
       const exactSinglePackaging = productPackagings.find((packaging) => Number(packaging.units_per_package) === 1);
-      const fallbackPackaging = productPackagings.find((packaging) => Number(packaging.units_per_package) > 0);
+      const fallbackPackaging = productPackagings[0] ?? null;
 
       const singleUnitSellingPrice = exactSinglePackaging
         ? Number(exactSinglePackaging.selling_price_per_package)
