@@ -78,15 +78,45 @@ function EmployeeRoute() {
   return <Outlet />;
 }
 
+function SyncStatusIndicator({ offline, syncing, pendingCount, lastSyncedAt }: { offline: boolean; syncing: boolean; pendingCount: number; lastSyncedAt: string | null }) {
+  const timeLabel = lastSyncedAt
+    ? new Date(lastSyncedAt).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit'
+      })
+    : null;
+
+  const message = offline
+    ? pendingCount > 0
+      ? `${pendingCount} pending sync`
+      : 'Offline'
+    : syncing
+      ? 'Syncing...'
+      : pendingCount > 0
+        ? `${pendingCount} pending sync`
+        : timeLabel
+          ? `Synced ${timeLabel}`
+          : 'Synced';
+
+  const toneClass = offline
+    ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-200'
+    : pendingCount > 0
+      ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-200'
+      : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-200';
+
+  return <p className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClass}`}>{message}</p>;
+}
+
 function OwnerLayout() {
   const { owner, signOut } = useAuth();
-  const { offline } = useSync();
+  const { offline, syncing, pendingCount, lastSyncedAt } = useSync();
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 pb-28 pt-3 text-slate-900 transition-colors dark:bg-navy dark:text-slate-50">
       <OfflineBanner offline={offline} />
       <div className="mx-auto flex max-w-2xl animate-fade-in flex-col gap-4">
         <AppHeader title="StoreWatch" subtitle={owner ? `Owner view · ${owner.name}` : 'Owner view'} onLogout={signOut} />
+        <SyncStatusIndicator offline={offline} syncing={syncing} pendingCount={pendingCount} lastSyncedAt={lastSyncedAt} />
         <Outlet />
       </div>
       <BottomNav
@@ -103,13 +133,14 @@ function OwnerLayout() {
 
 function EmployeeLayout() {
   const { employee, signOut } = useAuth();
-  const { offline } = useSync();
+  const { offline, syncing, pendingCount, lastSyncedAt } = useSync();
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 pb-28 pt-3 text-slate-900 transition-colors dark:bg-navy dark:text-slate-50">
       <OfflineBanner offline={offline} />
       <div className="mx-auto flex max-w-2xl animate-fade-in flex-col gap-4">
         <AppHeader title="StoreWatch" subtitle={employee ? `Employee view · ${employee.name}` : 'Employee view'} onLogout={signOut} />
+        <SyncStatusIndicator offline={offline} syncing={syncing} pendingCount={pendingCount} lastSyncedAt={lastSyncedAt} />
         <Outlet />
       </div>
       <BottomNav
