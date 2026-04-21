@@ -111,7 +111,7 @@ export default function ProductsPage() {
         name: draft.name.trim(),
         category: draft.category,
         unit_price: Number(draft.unit_price),
-        stock_qty: latestTargetProduct ? Number(draft.stock_qty) : 0,
+        stock_qty: Number(draft.stock_qty),
         low_stock_threshold: Number(draft.low_stock_threshold)
       });
       success('Saved', latestTargetProduct ? 'Product updated successfully.' : 'Product created successfully.');
@@ -261,7 +261,7 @@ export default function ProductsPage() {
           <Button variant="secondary" onClick={handleRefresh} disabled={saving}>
             Refresh
           </Button>
-          <Button onClick={() => { setShowAdd(true); setEditingProduct(null); setDraft(emptyForm()); setErrors({}); }}>
+          <Button onClick={() => { setShowAdd(true); setEditingProduct(null); setJustSavedProduct(null); setDraft(emptyForm()); setErrors({}); }}>
             <Plus className="mr-2 h-4 w-4" />
             Add
           </Button>
@@ -302,16 +302,6 @@ export default function ProductsPage() {
               )}
 
               <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setEditingProduct(product);
-                  }}
-                  fullWidth
-                >
-                  <Edit3 className="mr-2 h-4 w-4" />
-                  Manage Product
-                </Button>
                 <Button variant="secondary" fullWidth onClick={() => openEdit(product)}>
                   <Edit3 className="mr-2 h-4 w-4" />
                   Edit
@@ -326,13 +316,13 @@ export default function ProductsPage() {
         })}
       </div>
 
-      <Button className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full shadow-soft" onClick={() => { setShowAdd(true); setEditingProduct(null); setDraft(emptyForm()); setErrors({}); }} aria-label="Add product">
+      <Button className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full shadow-soft" onClick={() => { setShowAdd(true); setEditingProduct(null); setJustSavedProduct(null); setDraft(emptyForm()); setErrors({}); }} aria-label="Add product">
         <Plus className="h-6 w-6" />
       </Button>
 
       <Modal
         open={Boolean(editingProduct) || showAdd}
-        title={editingProduct ? 'Manage Product' : 'Add Product'}
+        title={editingProduct ? 'Edit Product' : 'Add Product'}
         onClose={() => {
           setEditingProduct(null);
           setShowAdd(false);
@@ -352,10 +342,10 @@ export default function ProductsPage() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-900/30">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">1. Product details</p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Start with the name, category, threshold, and set exact stock while editing.</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Start with the name, category, threshold, and set exact stock while adding or editing.</p>
           </div>
 
-          <ProductForm values={draft} errors={errors} onChange={setDraft} categories={availableCategories} showInitialStock={Boolean(editingProduct)} />
+          <ProductForm values={draft} errors={errors} onChange={setDraft} categories={availableCategories} showInitialStock />
 
           <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-900/30">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">2. Pricing tiers</p>
