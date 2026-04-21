@@ -16,6 +16,17 @@ export function usePackagings() {
         setPackagings(cached);
         setLoading(false);
       }
+
+      if (navigator.onLine) {
+        try {
+          await refreshPackagingFromSupabase();
+        } finally {
+          const latest = await getCachedPackaging();
+          if (mounted) {
+            setPackagings(latest);
+          }
+        }
+      }
     }
 
     load();

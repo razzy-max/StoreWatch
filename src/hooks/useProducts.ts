@@ -16,6 +16,17 @@ export function useProducts() {
         setProducts(cached);
         setLoading(false);
       }
+
+      if (navigator.onLine) {
+        try {
+          await refreshProductsFromSupabase();
+        } finally {
+          const latest = await getCachedProducts();
+          if (mounted) {
+            setProducts(latest);
+          }
+        }
+      }
     }
 
     load();
