@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { Card } from './Card';
 import type { ProductPackagingRecord } from '@/types/models';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface ProductPackagingPickerProps {
   packagingOptions: ProductPackagingRecord[];
@@ -25,7 +26,7 @@ export function ProductPackagingPicker({ packagingOptions, selectedPackagingId, 
                 className={clsx(
                   'border-2 transition active:scale-[0.99]',
                   selected
-                    ? 'border-amberAccent bg-amberAccent/20 shadow-md ring-2 ring-amber-300/70 dark:bg-amberAccent/20 dark:ring-amber-400/40'
+                    ? 'border-amberAccent bg-amber-200/80 shadow-md ring-2 ring-amber-300/80 dark:bg-amber-500/30 dark:ring-amber-400/50'
                     : 'border-slate-200 dark:border-transparent'
                 )}
               >
@@ -41,7 +42,7 @@ export function ProductPackagingPicker({ packagingOptions, selectedPackagingId, 
                   </div>
                   <div className="text-right">
                     <p className={clsx('text-sm font-semibold', selected ? 'text-slate-950 dark:text-slate-50' : 'text-amberAccent')}>
-                      {packaging.selling_price_per_package.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}
+                      {formatCurrency(Number(packaging.selling_price_per_package))}
                     </p>
                     {packaging.is_default ? <p className={clsx('text-xs', selected ? 'text-slate-800 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400')}>Default</p> : null}
                   </div>

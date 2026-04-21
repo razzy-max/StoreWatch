@@ -70,6 +70,15 @@ export default function DashboardPage() {
     () => filterUpdatesByDateRange(stockUpdates, startDate, endDate),
     [stockUpdates, startDate, endDate]
   );
+
+  const totalStockValuation = useMemo(() => {
+    return products.reduce((sum, product) => {
+      const singlePackaging = packagings.find((packaging) => packaging.product_id === product.id && Number(packaging.units_per_package) === 1);
+      const singleUnitSellingPrice = Number(singlePackaging?.selling_price_per_package ?? product.unit_price ?? 0);
+      return sum + getEffectiveStockUnits(product) * singleUnitSellingPrice;
+    }, 0);
+  }, [packagings, products]);
+
   const revenue = periodSales.reduce((sum, sale) => sum + Number(sale.total), 0);
   const salesCount = periodSales.length;
   const inventorySpend = calculateInventorySpend(stockInRange);
@@ -127,6 +136,13 @@ export default function DashboardPage() {
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Gross Profit (Est.): <span className="font-semibold text-slate-900 dark:text-slate-50">{formatCurrency(estimatedGrossProfit)}</span> · Low Stock Items: <span className="font-semibold text-slate-900 dark:text-slate-50">{lowStockProducts.length}</span>
         </p>
+      </Card>
+
+      <Card className="py-3">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Current Stock Valuation: <span className="font-semibold text-slate-900 dark:text-slate-50">{formatCurrency(totalStockValuation)}</span>
+        </p>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Calculated from current stock units using each product's single-unit selling price.</p>
       </Card>
 
       <Card className="space-y-3">
