@@ -11,6 +11,33 @@ async function loadEmployeeSales(employeeId: string) {
   return cachedSales.filter((sale: SaleRecord) => new Date(sale.timestamp) >= startOfDay);
 }
 
+async function loadEmployeeSalesFromSupabase(employeeId: string) {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*, product:products(name), packaging:product_packaging(label)')
+    .eq('recorded_by', employeeId)
+    .gte('timestamp', startOfDay.toISOString())
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row: any) => ({
+    ...(row as SaleView),
+    product_name: Array.isArray((row as { product?: Array<{ name?: string }> }).product)
+      ? (row as { product?: Array<{ name?: string }> }).product?.[0]?.name
+      : (row as { product?: { name?: string } }).product?.name,
+    packaging_label: Array.isArray((row as { packaging?: Array<{ label?: string }> }).packaging)
+      ? (row as { packaging?: Array<{ label?: string }> }).packaging?.[0]?.label
+      : (row as { packaging?: { label?: string } }).packaging?.label,
+    employee_name: employeeId
+  })) as SaleRecord[];
+}
+
 export function useEmployeeLog(employeeId?: string) {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +52,7 @@ export function useEmployeeLog(employeeId?: string) {
     let mounted = true;
 
     const load = async () => {
-      const cached = await loadEmployeeSales(employeeId);
+      const cached = navigator.onLine ? await loadEmployeeSalesFromSupabase(employeeId).catch(() => loadEmployeeSales(employeeId)) : await loadEmployeeSales(employeeId);
       if (mounted) {
         setSales(cached.sort((a: SaleRecord, b: SaleRecord) => b.timestamp.localeCompare(a.timestamp)));
         setLoading(false);
@@ -35,7 +62,7 @@ export function useEmployeeLog(employeeId?: string) {
     load();
 
     const handleChange = async () => {
-      const cached = await loadEmployeeSales(employeeId);
+      const cached = navigator.onLine ? await loadEmployeeSalesFromSupabase(employeeId).catch(() => loadEmployeeSales(employeeId)) : await loadEmployeeSales(employeeId);
       setSales(cached.sort((a: SaleRecord, b: SaleRecord) => b.timestamp.localeCompare(a.timestamp)));
     };
 
@@ -62,7 +89,39 @@ export function useEmployeeStockLog(employeeId?: string) {
 
     let mounted = true;
 
-    const load = async () => {
+    const loadFromSupabase = async () => {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('stock_updates')
+        .select('*, product:products(name), packaging:product_packaging(label, units_per_package), employee:users(name,role)')
+        .eq('recorded_by', employeeId)
+        .gte('timestamp', startOfDay.toISOString())
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return (data ?? []).map((row: any) => ({
+        ...(row as StockUpdateView),
+        product_name: Array.isArray((row as { product?: Array<{ name?: string }> }).product)
+          ? (row as { product?: Array<{ name?: string }> }).product?.[0]?.name
+          : (row as { product?: { name?: string } }).product?.name,
+        employee_name: employeeId,
+        recorded_by_name: employeeId,
+        recorded_by_role: 'employee',
+        packaging_label: Array.isArray((row as { packaging?: Array<{ label?: string }> }).packaging)
+          ? (row as { packaging?: Array<{ label?: string }> }).packaging?.[0]?.label
+          : (row as { packaging?: { label?: string } }).packaging?.label,
+        packaging_units_per_package: Array.isArray((row as { packaging?: Array<{ units_per_package?: number }> }).packaging)
+          ? (row as { packaging?: Array<{ units_per_package?: number }> }).packaging?.[0]?.units_per_package
+          : (row as { packaging?: { units_per_package?: number } }).packaging?.units_per_package
+      })) as StockUpdateView[];
+    };
+
+    const loadFromCache = async (): Promise<StockUpdateView[]> => {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       const [cached, products, packaging] = await Promise.all([
@@ -81,8 +140,13 @@ export function useEmployeeStockLog(employeeId?: string) {
         }))
         .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
+      return rows;
+    };
+
+    const load = async () => {
+      const rows = navigator.onLine ? await loadFromSupabase().catch(loadFromCache) : await loadFromCache();
       if (mounted) {
-        setUpdates(rows);
+        setUpdates(rows.sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
         setLoading(false);
       }
     };
