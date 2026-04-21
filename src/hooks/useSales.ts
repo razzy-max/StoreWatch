@@ -38,6 +38,47 @@ async function loadEmployeeSalesFromSupabase(employeeId: string) {
   })) as SaleRecord[];
 }
 
+async function loadEmployeeSalesFromInventoryMovements(employeeId: string) {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const { data, error } = await supabase
+    .from('inventory_movements')
+    .select('id, product_id, packaging_id, entered_qty, unit_price_snapshot, recorded_by, timestamp, synced, delta_base_units, product:products(name), packaging:product_packaging(label)')
+    .eq('recorded_by', employeeId)
+    .eq('movement_type', 'sale')
+    .gte('timestamp', startOfDay.toISOString())
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row: any) => {
+    const qty = Number((row as { entered_qty?: number }).entered_qty ?? 0);
+    const unitPrice = Number((row as { unit_price_snapshot?: number }).unit_price_snapshot ?? 0);
+    return {
+      id: (row as { id: string }).id,
+      product_id: (row as { product_id: string }).product_id,
+      qty,
+      total: qty * unitPrice,
+      recorded_by: (row as { recorded_by: string }).recorded_by,
+      timestamp: (row as { timestamp: string }).timestamp,
+      synced: Boolean((row as { synced?: boolean }).synced),
+      packaging_id: (row as { packaging_id?: string | null }).packaging_id ?? null,
+      qty_base_units: Math.abs(Number((row as { delta_base_units?: number }).delta_base_units ?? 0)),
+      unit_price_snapshot: unitPrice,
+      product_name: Array.isArray((row as { product?: Array<{ name?: string }> }).product)
+        ? (row as { product?: Array<{ name?: string }> }).product?.[0]?.name
+        : (row as { product?: { name?: string } }).product?.name,
+      packaging_label: Array.isArray((row as { packaging?: Array<{ label?: string }> }).packaging)
+        ? (row as { packaging?: Array<{ label?: string }> }).packaging?.[0]?.label
+        : (row as { packaging?: { label?: string } }).packaging?.label,
+      employee_name: employeeId
+    };
+  }) as SaleRecord[];
+}
+
 export function useEmployeeLog(employeeId?: string) {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +93,9 @@ export function useEmployeeLog(employeeId?: string) {
     let mounted = true;
 
     const load = async () => {
-      const cached = navigator.onLine ? await loadEmployeeSalesFromSupabase(employeeId).catch(() => loadEmployeeSales(employeeId)) : await loadEmployeeSales(employeeId);
+      const cached = navigator.onLine
+        ? await loadEmployeeSalesFromSupabase(employeeId).catch(() => loadEmployeeSalesFromInventoryMovements(employeeId).catch(() => loadEmployeeSales(employeeId)))
+        : await loadEmployeeSales(employeeId);
       if (mounted) {
         setSales(cached.sort((a: SaleRecord, b: SaleRecord) => b.timestamp.localeCompare(a.timestamp)));
         setLoading(false);
@@ -62,7 +105,9 @@ export function useEmployeeLog(employeeId?: string) {
     load();
 
     const handleChange = async () => {
-      const cached = navigator.onLine ? await loadEmployeeSalesFromSupabase(employeeId).catch(() => loadEmployeeSales(employeeId)) : await loadEmployeeSales(employeeId);
+      const cached = navigator.onLine
+        ? await loadEmployeeSalesFromSupabase(employeeId).catch(() => loadEmployeeSalesFromInventoryMovements(employeeId).catch(() => loadEmployeeSales(employeeId)))
+        : await loadEmployeeSales(employeeId);
       setSales(cached.sort((a: SaleRecord, b: SaleRecord) => b.timestamp.localeCompare(a.timestamp)));
     };
 
@@ -121,6 +166,52 @@ export function useEmployeeStockLog(employeeId?: string) {
       })) as StockUpdateView[];
     };
 
+    const loadFromInventoryMovements = async (): Promise<StockUpdateView[]> => {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('inventory_movements')
+        .select('id, product_id, packaging_id, entered_qty, recorded_by, timestamp, synced, delta_base_units, product:products(name), packaging:product_packaging(label, units_per_package), employee:users(name,role)')
+        .eq('recorded_by', employeeId)
+        .eq('movement_type', 'stock_receive')
+        .gte('timestamp', startOfDay.toISOString())
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return (data ?? []).map((row: any) => ({
+        id: (row as { id: string }).id,
+        product_id: (row as { product_id: string }).product_id,
+        qty_added: Number((row as { entered_qty?: number }).entered_qty ?? 0),
+        recorded_by: (row as { recorded_by: string }).recorded_by,
+        timestamp: (row as { timestamp: string }).timestamp,
+        synced: Boolean((row as { synced?: boolean }).synced),
+        packaging_id: (row as { packaging_id?: string | null }).packaging_id ?? null,
+        qty_base_units: Math.abs(Number((row as { delta_base_units?: number }).delta_base_units ?? 0)),
+        cost_price_per_unit: null,
+        cost_price_per_package: null,
+        product_name: Array.isArray((row as { product?: Array<{ name?: string }> }).product)
+          ? (row as { product?: Array<{ name?: string }> }).product?.[0]?.name
+          : (row as { product?: { name?: string } }).product?.name,
+        employee_name: employeeId,
+        recorded_by_name: Array.isArray((row as { employee?: Array<{ name?: string }> }).employee)
+          ? (row as { employee?: Array<{ name?: string }> }).employee?.[0]?.name
+          : (row as { employee?: { name?: string } }).employee?.name,
+        recorded_by_role: Array.isArray((row as { employee?: Array<{ role?: 'owner' | 'employee' }> }).employee)
+          ? (row as { employee?: Array<{ role?: 'owner' | 'employee' }> }).employee?.[0]?.role
+          : (row as { employee?: { role?: 'owner' | 'employee' } }).employee?.role,
+        packaging_label: Array.isArray((row as { packaging?: Array<{ label?: string }> }).packaging)
+          ? (row as { packaging?: Array<{ label?: string }> }).packaging?.[0]?.label
+          : (row as { packaging?: { label?: string } }).packaging?.label,
+        packaging_units_per_package: Array.isArray((row as { packaging?: Array<{ units_per_package?: number }> }).packaging)
+          ? (row as { packaging?: Array<{ units_per_package?: number }> }).packaging?.[0]?.units_per_package
+          : (row as { packaging?: { units_per_package?: number } }).packaging?.units_per_package
+      }));
+    };
+
     const loadFromCache = async (): Promise<StockUpdateView[]> => {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -144,7 +235,7 @@ export function useEmployeeStockLog(employeeId?: string) {
     };
 
     const load = async () => {
-      const rows = navigator.onLine ? await loadFromSupabase().catch(loadFromCache) : await loadFromCache();
+      const rows = navigator.onLine ? await loadFromSupabase().catch(() => loadFromInventoryMovements().catch(loadFromCache)) : await loadFromCache();
       if (mounted) {
         setUpdates(rows.sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
         setLoading(false);
