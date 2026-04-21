@@ -73,8 +73,19 @@ export default function DashboardPage() {
 
   const totalStockValuation = useMemo(() => {
     return products.reduce((sum, product) => {
-      const singlePackaging = packagings.find((packaging) => packaging.product_id === product.id && Number(packaging.units_per_package) === 1);
-      const singleUnitSellingPrice = Number(singlePackaging?.selling_price_per_package ?? product.unit_price ?? 0);
+      const productPackagings = packagings
+        .filter((packaging) => packaging.product_id === product.id)
+        .sort((a, b) => Number(a.units_per_package) - Number(b.units_per_package));
+
+      const exactSinglePackaging = productPackagings.find((packaging) => Number(packaging.units_per_package) === 1);
+      const fallbackPackaging = productPackagings.find((packaging) => Number(packaging.units_per_package) > 0);
+
+      const singleUnitSellingPrice = exactSinglePackaging
+        ? Number(exactSinglePackaging.selling_price_per_package)
+        : fallbackPackaging
+          ? Number(fallbackPackaging.selling_price_per_package) / Number(fallbackPackaging.units_per_package)
+          : Number(product.unit_price ?? 0);
+
       return sum + getEffectiveStockUnits(product) * singleUnitSellingPrice;
     }, 0);
   }, [packagings, products]);
