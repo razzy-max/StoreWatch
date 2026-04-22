@@ -1,4 +1,4 @@
-import { Edit3, Plus, Trash2 } from 'lucide-react';
+import { Edit3, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -24,6 +24,10 @@ function emptyForm(): ProductFormValues {
   };
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export default function ProductsPage() {
   const { owner } = useAuth();
   const { products } = useProducts();
@@ -34,6 +38,7 @@ export default function ProductsPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof ProductFormValues, string>>>({});
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
   const [packageToDelete, setPackageToDelete] = useState<ProductPackagingRecord | null>(null);
   const [justSavedProduct, setJustSavedProduct] = useState<ProductRecord | null>(null);
@@ -46,6 +51,39 @@ export default function ProductsPage() {
     () => Array.from(new Set(products.map((product) => product.category))).sort((a, b) => a.localeCompare(b)),
     [products]
   );
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const highlightQuery = search.trim();
+  const filteredProducts = useMemo(
+    () =>
+      normalizedSearch
+        ? products.filter(
+            (product) =>
+              product.name.toLowerCase().includes(normalizedSearch) ||
+              product.category.toLowerCase().includes(normalizedSearch)
+          )
+        : products,
+    [products, normalizedSearch]
+  );
+
+  function renderHighlightedText(text: string) {
+    if (!highlightQuery) {
+      return text;
+    }
+
+    const parts = text.split(new RegExp(`(${escapeRegExp(highlightQuery)})`, 'gi'));
+    return parts.map((part, index) => {
+      if (part.toLowerCase() === highlightQuery.toLowerCase()) {
+        return (
+          <mark key={`${part}-${index}`} className="rounded bg-amber-200 px-0.5 text-slate-900 dark:bg-amber-500/40 dark:text-slate-50">
+            {part}
+          </mark>
+        );
+      }
+
+      return <span key={`${part}-${index}`}>{part}</span>;
+    });
+  }
 
   const productPackagings = useMemo(
     () => packagings.filter((p) => p.product_id === (justSavedProduct?.id || editingProduct?.id)),
@@ -268,15 +306,28 @@ export default function ProductsPage() {
         </div>
       </Card>
 
+      <Card>
+        <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Search products</label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by product or category"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-slate-100 pl-10 pr-4 text-slate-900 outline-none placeholder:text-slate-500 focus:border-amberAccent dark:border-slate-700 dark:bg-navy dark:text-slate-50"
+          />
+        </div>
+      </Card>
+
       <div className="space-y-3">
-        {products.map((product) => {
+        {filteredProducts.map((product) => {
           const tiers = packagings.filter((p) => p.product_id === product.id);
           return (
             <Card key={product.id} className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-base font-semibold text-slate-900 dark:text-slate-50">{product.name}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{product.category} · {formatCurrency(Number(product.unit_price))}</p>
+                  <p className="text-base font-semibold text-slate-900 dark:text-slate-50">{renderHighlightedText(product.name)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{renderHighlightedText(product.category)} · {formatCurrency(Number(product.unit_price))}</p>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-300">Stock {product.stock_qty}</p>
               </div>
@@ -314,6 +365,10 @@ export default function ProductsPage() {
             </Card>
           );
         })}
+
+        {filteredProducts.length === 0 ? (
+          <Card className="text-sm text-slate-600 dark:text-slate-400">No products match your search.</Card>
+        ) : null}
       </div>
 
       <Button className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full shadow-soft" onClick={() => { setShowAdd(true); setEditingProduct(null); setJustSavedProduct(null); setDraft(emptyForm()); setErrors({}); }} aria-label="Add product">
