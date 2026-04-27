@@ -11,7 +11,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { usePackagings } from '@/hooks/usePackagings';
 import { recordSale, friendlyError } from '@/lib/sync';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { formatStockDisplay, getEffectiveStockUnits } from '@/utils/stockDisplay';
+import { formatStockUnitsDisplay, getEffectiveStockUnits } from '@/utils/stockDisplay';
 import type { ProductCategory, ProductPackagingRecord, ProductRecord } from '@/types/models';
 import { ShoppingCart } from 'lucide-react';
 
@@ -279,6 +279,7 @@ export default function SalePage() {
         category={category}
         products={products}
         selectedId={selectedProduct?.id}
+        stockDisplayMode="units"
         onSearchChange={setSearch}
         onCategoryChange={setCategory}
         onSelect={(product) => {
@@ -297,7 +298,7 @@ export default function SalePage() {
             <div className="mt-2 rounded-2xl border border-amberAccent/40 bg-amberAccent/10 p-4">
               <p className="text-base font-semibold text-slate-900 dark:text-slate-50">{activeProduct.name}</p>
               <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                {activeProduct.category} · {formatStockDisplay(activeProduct, productPackagings)}
+                {activeProduct.category} · {formatStockUnitsDisplay(activeProduct)}
               </p>
             </div>
           ) : (

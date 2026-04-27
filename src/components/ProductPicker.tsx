@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import type { ProductCategory, ProductRecord } from '@/types/models';
 import { Button } from './Button';
 import { Card } from './Card';
-import { formatStockDisplay } from '@/utils/stockDisplay';
+import { formatStockDisplay, formatStockUnitsDisplay } from '@/utils/stockDisplay';
 import { usePackagings } from '@/hooks/usePackagings';
 
 interface ProductPickerProps {
@@ -11,6 +11,7 @@ interface ProductPickerProps {
   category: 'All' | ProductCategory;
   products: ProductRecord[];
   selectedId?: string;
+  stockDisplayMode?: 'breakdown' | 'units';
   onSearchChange: (value: string) => void;
   onCategoryChange: (value: 'All' | ProductCategory) => void;
   onSelect: (product: ProductRecord) => void;
@@ -21,6 +22,7 @@ export function ProductPicker({
   category,
   products,
   selectedId,
+  stockDisplayMode = 'breakdown',
   onSearchChange,
   onCategoryChange,
   onSelect
@@ -78,7 +80,9 @@ export function ProductPicker({
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-amberAccent">{product.unit_price.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Stock: {formatStockDisplay(product, packagings)}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Stock: {stockDisplayMode === 'units' ? formatStockUnitsDisplay(product) : formatStockDisplay(product, packagings)}
+                  </p>
                 </div>
               </div>
             </Card>

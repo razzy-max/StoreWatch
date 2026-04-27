@@ -16,6 +16,11 @@ export function getEffectiveStockUnits(product: ProductRecord) {
   return product.stock_base_units ?? product.stock_qty ?? 0;
 }
 
+export function formatStockUnitsDisplay(product: ProductRecord) {
+  const stockUnits = getEffectiveStockUnits(product);
+  return `${stockUnits} ${stockUnits === 1 ? 'unit' : 'units'}`;
+}
+
 export function getLowStockThresholdUnits(product: ProductRecord) {
   return product.low_stock_threshold_base_units ?? product.low_stock_threshold ?? 0;
 }
